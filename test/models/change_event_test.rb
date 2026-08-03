@@ -1,5 +1,5 @@
 require "test_helper"
-require "minitest/mock"
+
 class ChangeEventTest < ActiveSupport::TestCase
   setup do
     @older = ChangeEvent.record!(
@@ -83,10 +83,7 @@ class ChangeEventTest < ActiveSupport::TestCase
       source: :debug
     )
 
-    Rails.stub(
-      :env,
-      ActiveSupport::EnvironmentInquirer.new("development")
-    ) do
+    with_rails_env("development") do
       with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
         removed = ChangeEvent.remove_debug!(id: debug_event.id)
 
@@ -96,10 +93,7 @@ class ChangeEventTest < ActiveSupport::TestCase
   end
 
   test "remove_debug!は正式な変更記録を削除しない" do
-    Rails.stub(
-      :env,
-      ActiveSupport::EnvironmentInquirer.new("development")
-    ) do
+    with_rails_env("development") do
       with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
         assert_raises ActiveRecord::RecordNotDestroyed do
           ChangeEvent.remove_debug!(id: @newer.id)
@@ -110,29 +104,23 @@ class ChangeEventTest < ActiveSupport::TestCase
     assert_predicate @newer.reload, :persisted?
   end
 
-  test "デバッグ機能は環境変数がtrueの開発環境だけ有効になる" do
-    Rails.stub(
-      :env,
-      ActiveSupport::EnvironmentInquirer.new("development")
-    ) do
-      with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
-        assert_predicate ChangeEvent, :debug_enabled?
-      end
-
-      with_env("ENABLE_CHANGE_EVENT_DEBUG", "false") do
-        assert_not_predicate ChangeEvent, :debug_enabled?
-      end
+ test "デバッグ機能は環境変数がtrueの開発環境だけ有効になる" do
+  with_rails_env("development") do
+    with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
+      assert_predicate ChangeEvent, :debug_enabled?
     end
 
-    Rails.stub(
-      :env,
-      ActiveSupport::EnvironmentInquirer.new("production")
-    ) do
-      with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
-        assert_not_predicate ChangeEvent, :debug_enabled?
-      end
+    with_env("ENABLE_CHANGE_EVENT_DEBUG", "false") do
+      assert_not_predicate ChangeEvent, :debug_enabled?
     end
   end
+
+  with_rails_env("production") do
+    with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
+      assert_not_predicate ChangeEvent, :debug_enabled?
+    end
+  end
+end
 
   private
 
@@ -143,4 +131,17 @@ class ChangeEventTest < ActiveSupport::TestCase
   ensure
     ENV[name] = previous
   end
+end
+
+def with_rails_env(name)
+  previous = Rails.instance_variable_get(:@_env)
+
+  Rails.instance_variable_set(
+    :@_env,
+    ActiveSupport::EnvironmentInquirer.new(name)
+  )
+
+  yield
+ensure
+  Rails.instance_variable_set(:@_env, previous)
 end
