@@ -1,0 +1,50 @@
+{
+  "name": "rc2026-base",
+  "dockerComposeFile": "compose.yaml",
+  "service": "rails-app",
+  "workspaceFolder": "/workspaces/rc2026_base",
+  "features": {
+  "ghcr.io/devcontainers/features/github-cli:1": {},
+  "ghcr.io/rails/devcontainer/features/postgres-client": {},
+  "ghcr.io/rails/devcontainer/features/activestorage": {}
+},
+  "containerEnv": {
+  "RAILS_ENV": "development"
+},
+"postCreateCommand": "bin/setup --skip-server",
+"forwardPorts": [3000, 5432],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "Shopify.ruby-lsp",
+        "eamodio.gitlens",
+        "PKief.material-icon-theme"
+      ],
+      "settings": {
+        "workbench.iconTheme": "material-icon-theme",
+        "editor.renderWhitespace": "boundary",
+        "editor.guides.indentation": true,
+        "editor.guides.highlightActiveIndentation": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "rubyLsp.formatter": "auto",
+        "[ruby]": {
+          "editor.defaultFormatter": "Shopify.ruby-lsp",
+          "editor.formatOnSave": true,
+          "editor.formatOnType": false,
+          "editor.detectIndentation": false,
+          "editor.tabSize": 2,
+          "editor.insertSpaces": true,
+          "editor.semanticHighlighting.enabled": true
+        },
+        "[erb]": {
+          "editor.formatOnSave": false,
+          "editor.formatOnType": false,
+          "editor.detectIndentation": false,
+          "editor.tabSize": 2,
+          "editor.insertSpaces": true
+        }
+      }
+    }
+  }
+}

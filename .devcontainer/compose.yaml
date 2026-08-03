@@ -1,0 +1,38 @@
+name: "rc2026-base"
+
+services:
+  rails-app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    volumes:
+      - ..:/workspaces/rc2026_base:cached
+    command: sleep infinity
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/rc2026_base_development}
+      TEST_DATABASE_URL: ${TEST_DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/rc2026_base_test}
+      ENABLE_CHANGE_EVENT_DEBUG: ${ENABLE_CHANGE_EVENT_DEBUG:-false}
+    ports:
+      - "${RAILS_PORT:-3000}:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16.1
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
