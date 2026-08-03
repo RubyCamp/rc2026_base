@@ -25,7 +25,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
     t.index ["status"], name: "index_assignments_on_status"
     t.index ["work_request_id", "staff_member_id"], name: "index_assignments_on_work_request_id_and_staff_member_id", unique: true
     t.index ["work_request_id"], name: "index_assignments_on_work_request_id"
-    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying, 'confirmed'::character varying]::text[])", name: "assignments_status_check"
+    t.check_constraint "status::text = ANY (ARRAY['draft'::character varying::text, 'confirmed'::character varying::text])", name: "assignments_status_check"
   end
 
   create_table "availabilities", force: :cascade do |t|
@@ -39,7 +39,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
     t.index ["staff_member_id", "starts_at"], name: "index_availabilities_on_staff_member_id_and_starts_at"
     t.index ["staff_member_id"], name: "index_availabilities_on_staff_member_id"
     t.check_constraint "ends_at > starts_at", name: "availabilities_time_range_check"
-    t.check_constraint "status::text = ANY (ARRAY['available'::character varying, 'unavailable'::character varying]::text[])", name: "availabilities_status_check"
+    t.check_constraint "status::text = ANY (ARRAY['available'::character varying::text, 'unavailable'::character varying::text])", name: "availabilities_status_check"
   end
 
   create_table "businesses", force: :cascade do |t|
@@ -68,10 +68,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
     t.index ["review_status"], name: "index_change_events_on_review_status"
     t.index ["source"], name: "index_change_events_on_source"
     t.index ["target_type", "target_id"], name: "index_change_events_on_target_type_and_target_id"
-    t.check_constraint "action_type::text = ANY (ARRAY['created'::character varying, 'updated'::character varying, 'cancelled'::character varying, 'deleted'::character varying, 'assigned'::character varying, 'confirmed'::character varying, 'unassigned'::character varying]::text[])", name: "change_events_action_type_check"
-    t.check_constraint "review_status::text = ANY (ARRAY['pending'::character varying, 'reviewed'::character varying]::text[])", name: "change_events_review_status_check"
-    t.check_constraint "source::text = ANY (ARRAY['operation'::character varying, 'seed'::character varying, 'debug'::character varying]::text[])", name: "change_events_source_check"
-    t.check_constraint "target_type::text = ANY (ARRAY['work_request'::character varying, 'availability'::character varying, 'assignment'::character varying]::text[])", name: "change_events_target_type_check"
+    t.check_constraint "action_type::text = ANY (ARRAY['created'::character varying::text, 'updated'::character varying::text, 'cancelled'::character varying::text, 'deleted'::character varying::text, 'assigned'::character varying::text, 'confirmed'::character varying::text, 'unassigned'::character varying::text])", name: "change_events_action_type_check"
+    t.check_constraint "review_status::text = ANY (ARRAY['pending'::character varying::text, 'reviewed'::character varying::text])", name: "change_events_review_status_check"
+    t.check_constraint "source::text = ANY (ARRAY['operation'::character varying::text, 'seed'::character varying::text, 'debug'::character varying::text])", name: "change_events_source_check"
+    t.check_constraint "target_type::text = ANY (ARRAY['work_request'::character varying::text, 'availability'::character varying::text, 'assignment'::character varying::text])", name: "change_events_target_type_check"
   end
 
   create_table "skills", force: :cascade do |t|
@@ -91,7 +91,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
     t.datetime "updated_at", null: false
     t.index ["employment_status"], name: "index_staff_members_on_employment_status"
     t.index ["name"], name: "index_staff_members_on_name"
-    t.check_constraint "employment_status::text = ANY (ARRAY['active'::character varying, 'inactive'::character varying]::text[])", name: "staff_members_employment_status_check"
+    t.check_constraint "employment_status::text = ANY (ARRAY['active'::character varying::text, 'inactive'::character varying::text])", name: "staff_members_employment_status_check"
   end
 
   create_table "staff_skills", force: :cascade do |t|
@@ -122,7 +122,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
     t.index ["status"], name: "index_work_requests_on_status"
     t.check_constraint "ends_at > starts_at", name: "work_requests_time_range_check"
     t.check_constraint "required_staff_count > 0", name: "work_requests_required_staff_count_check"
-    t.check_constraint "status::text = ANY (ARRAY['open'::character varying, 'draft'::character varying, 'confirmed'::character varying, 'cancelled'::character varying]::text[])", name: "work_requests_status_check"
+    t.check_constraint "status::text = ANY (ARRAY['open'::character varying::text, 'draft'::character varying::text, 'confirmed'::character varying::text, 'cancelled'::character varying::text])", name: "work_requests_status_check"
   end
 
   add_foreign_key "assignments", "staff_members"
