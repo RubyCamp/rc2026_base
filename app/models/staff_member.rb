@@ -7,4 +7,49 @@ class StaffMember < ApplicationRecord
   enum :employment_status, { active: "active", inactive: "inactive" }, validate: true
 
   validates :name, presence: true
+
+  def self.for_list
+    includes(:skills, :availabilities).order(:name)
+  end
+
+  def self.for_assignment
+    where(employment_status: :active).order(:name)
+  end
+
+  def self.available_for(work_request_id:)
+    work_request = WorkRequest.find(work_request_id)
+    assigned_staff_ids = Assignment.where(work_request_id:).select(:staff_member_id)
+
+    skilled_for(work_request_id:)
+      .merge(available_during(work_request_id:))
+      .where.not(id: assigned_staff_ids)
+      .distinct
+      .order(:name)
+  end
+
+  def self.skilled_for(work_request_id:)
+    work_request = WorkRequest.find(work_request_id)
+
+    joins(:skills)
+      .where(
+        employment_status: :active,
+        skills: { id: work_request.required_skill_id }
+      )
+      .distinct
+      .order(:name)
+  end
+
+  def self.available_during(work_request_id:)
+    work_request = WorkRequest.find(work_request_id)
+
+    joins(:availabilities)
+      .where(
+        employment_status: :active,
+        availabilities: { status: :available }
+      )
+      .where("availabilities.starts_at <= ?", work_request.starts_at)
+      .where("availabilities.ends_at >= ?", work_request.ends_at)
+      .distinct
+      .order(:name)
+  end
 end

@@ -8,4 +8,8 @@ class Skill < ApplicationRecord
 
   validates :code, presence: true, uniqueness: true
   validates :name, presence: true
+
+  def self.for_selection
+    where(active: true).order(:name)
+  end
 end
