@@ -11,6 +11,9 @@ class AvailabilityTest < ActiveSupport::TestCase
   end
 
   test "register_or_update!は勤務可否を登録して保存済みモデルを返す" do
+  availability = nil
+
+  assert_difference("ChangeEvent.count", 1) do
     availability = Availability.register_or_update!(
       attributes: {
         staff_member: @staff_member,
@@ -19,10 +22,11 @@ class AvailabilityTest < ActiveSupport::TestCase
         status: :available
       }
     )
-
-    assert_predicate availability, :persisted?
-    assert_predicate availability, :available?
   end
+
+  assert_predicate availability, :persisted?
+  assert_predicate availability, :available?
+end
 
   test "register_or_update!は同じスタッフと開始日時の勤務可否を更新する" do
     original = Availability.register_or_update!(
@@ -48,6 +52,20 @@ class AvailabilityTest < ActiveSupport::TestCase
     assert_predicate updated, :unavailable?
     assert_equal "予定変更", updated.notes
   end
+  test "register_or_update!は実質的な変更がない場合に変更記録を作らない" do
+  attributes = {
+    staff_member: @staff_member,
+    starts_at: @starts_at,
+    ends_at: @starts_at + 8.hours,
+    status: :available
+  }
+
+  Availability.register_or_update!(attributes: attributes)
+
+  assert_no_difference("ChangeEvent.count") do
+    Availability.register_or_update!(attributes: attributes)
+  end
+end
 
   test "for_staffは対象スタッフの勤務可否を開始日時順で返す" do
     later = Availability.register_or_update!(

@@ -30,14 +30,18 @@ class AssignmentTest < ActiveSupport::TestCase
   end
 
   test "assign!は下書きの割当を作成して保存済みモデルを返す" do
+  assignment = nil
+
+  assert_difference("ChangeEvent.count", 1) do
     assignment = Assignment.assign!(
       work_request_id: @work_request.id,
       staff_member_id: @staff_member.id
     )
-
-    assert_predicate assignment, :persisted?
-    assert_predicate assignment, :draft?
   end
+
+  assert_predicate assignment, :persisted?
+  assert_predicate assignment, :draft?
+end
 
   test "assign!は重複割当でRecordInvalidを送出する" do
     Assignment.assign!(
@@ -109,19 +113,40 @@ class AssignmentTest < ActiveSupport::TestCase
     assert_predicate confirmed, :confirmed?
     assert_equal assignment, confirmed
   end
+  test "confirm!は確定済みの割当で変更記録を追加しない" do
+  assignment = Assignment.assign!(
+    work_request_id: @work_request.id,
+    staff_member_id: @staff_member.id
+  )
+
+  Assignment.confirm!(id: assignment.id)
+
+  assert_no_difference("ChangeEvent.count") do
+    Assignment.confirm!(id: assignment.id)
+  end
+end
 
   test "unassign!は削除した割当を返す" do
-    assignment = Assignment.assign!(
-      work_request_id: @work_request.id,
-      staff_member_id: @staff_member.id
-    )
+  assignment = Assignment.assign!(
+    work_request_id: @work_request.id,
+    staff_member_id: @staff_member.id
+  )
 
+  removed = nil
+
+  assert_difference("ChangeEvent.count", 1) do
     removed = Assignment.unassign!(id: assignment.id)
-
-    assert_predicate removed, :destroyed?
-
-    assert_raises ActiveRecord::RecordNotFound do
-      Assignment.find(assignment.id)
-    end
   end
+
+  assert_predicate removed, :destroyed?
+
+  assert_raises ActiveRecord::RecordNotFound do
+    Assignment.find(assignment.id)
+  end
+
+  assert_includes(
+    ChangeEvent.recent.first.summary,
+    "割当を解除しました"
+  )
+end
 end

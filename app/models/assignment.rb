@@ -20,14 +20,61 @@ class Assignment < ApplicationRecord
   end
 
   def self.assign!(work_request_id:, staff_member_id:)
-    create!(work_request_id:, staff_member_id:, status: :draft)
+  transaction do
+    create!(
+      work_request_id: work_request_id,
+      staff_member_id: staff_member_id,
+      status: :draft
+    ).tap do |assignment|
+      ChangeEvent.record!(
+        target_type: :assignment,
+        target_id: assignment.id,
+        action_type: :assigned,
+        summary: "#{assignment.staff_member.name}さんを" \
+                 "勤務依頼「#{assignment.work_request.title}」へ" \
+                 "仮割当しました"
+      )
+    end
   end
+end
 
-  def self.confirm!(id:)
-    find(id).tap(&:confirmed!)
-  end
+def self.confirm!(id:)
+  transaction do
+    find(id).tap do |assignment|
+      assignment.confirmed!
 
-  def self.unassign!(id:)
-    find(id).tap(&:destroy!)
+      next unless assignment.saved_changes.except("updated_at").any?
+
+      ChangeEvent.record!(
+        target_type: :assignment,
+        target_id: assignment.id,
+        action_type: :confirmed,
+        summary: "#{assignment.staff_member.name}さんの" \
+                 "勤務依頼「#{assignment.work_request.title}」への" \
+                 "割当を確定しました"
+      )
+    end
   end
+end
+
+def self.unassign!(id:)
+  transaction do
+    find(id).tap do |assignment|
+      target_id = assignment.id
+      staff_name = assignment.staff_member.name
+      work_request_title = assignment.work_request.title
+
+      assignment.destroy!
+
+      ChangeEvent.record!(
+        target_type: :assignment,
+        target_id: target_id,
+        action_type: :unassigned,
+        summary: "#{staff_name}さんの" \
+                 "勤務依頼「#{work_request_title}」への" \
+                 "割当を解除しました"
+      )
+    end
+  end
+end
 end

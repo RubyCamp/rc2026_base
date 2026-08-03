@@ -1,0 +1,43 @@
+ja:
+  errors:
+    format: "%{attribute}%{message}"
+
+  time:
+    formats:
+      short: "%m月%d日 %H:%M"
+      long: "%Y年%m月%d日 %H:%M"
+
+  activerecord:
+    attributes:
+      assignment:
+        staff_member_id: スタッフ
+
+    errors:
+      models:
+        assignment:
+          attributes:
+            staff_member_id:
+              taken: はすでに割り当てられています
+
+  statuses:
+    work_request:
+      draft: 下書き
+      open: 受付中
+      confirmed: 確定
+      cancelled: 取消
+
+    assignment:
+      draft: 下書き
+      confirmed: 確定
+
+    change_event:
+      pending: 未確認
+      reviewed: 確認済み
+
+    staff_member:
+      active: 在籍中
+      inactive: 退職
+
+    availability:
+      available: 勤務可能
+      unavailable: 勤務不可

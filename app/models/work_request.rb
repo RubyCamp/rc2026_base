@@ -53,20 +53,55 @@ class WorkRequest < ApplicationRecord
   end
 
   def self.register!(attributes:)
-    create!(attributes)
-  end
-
-  def self.update_details!(id:, attributes:)
-    find(id).tap do |work_request|
-      work_request.update!(attributes)
+  transaction do
+    create!(attributes).tap do |work_request|
+      ChangeEvent.record!(
+        target_type: :work_request,
+        target_id: work_request.id,
+        action_type: :created,
+        summary: "勤務依頼「#{work_request.title}」を登録しました"
+      )
     end
   end
+end
 
-  def self.cancel!(id:)
-    find(id).tap(&:cancelled!)
+def self.update_details!(id:, attributes:)
+  transaction do
+    find(id).tap do |work_request|
+      work_request.assign_attributes(attributes)
+      work_request.save!
+
+      next unless business_changes?(work_request)
+
+      ChangeEvent.record!(
+        target_type: :work_request,
+        target_id: work_request.id,
+        action_type: :updated,
+        summary: "勤務依頼「#{work_request.title}」を更新しました"
+      )
+    end
   end
+end
 
-  def self.remove!(id:)
+def self.cancel!(id:)
+  transaction do
+    find(id).tap do |work_request|
+      work_request.cancelled!
+
+      next unless business_changes?(work_request)
+
+      ChangeEvent.record!(
+        target_type: :work_request,
+        target_id: work_request.id,
+        action_type: :cancelled,
+        summary: "勤務依頼「#{work_request.title}」を取り消しました"
+      )
+    end
+  end
+end
+
+def self.remove!(id:)
+  transaction do
     find(id).tap do |work_request|
       unless work_request.draft? && work_request.assignments.none?
         message = "下書きで割当のない勤務依頼だけ削除できます"
@@ -78,10 +113,26 @@ class WorkRequest < ApplicationRecord
         )
       end
 
+      target_id = work_request.id
+      title = work_request.title
+
       work_request.destroy!
+
+      ChangeEvent.record!(
+        target_type: :work_request,
+        target_id: target_id,
+        action_type: :deleted,
+        summary: "勤務依頼「#{title}」を削除しました"
+      )
     end
   end
+end
 
+def self.business_changes?(record)
+  record.saved_changes.except("updated_at").any?
+end
+
+private_class_method :business_changes?
   private
 
   def ends_at_after_starts_at

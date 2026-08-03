@@ -107,7 +107,10 @@ class WorkRequestTest < ActiveSupport::TestCase
     assert_equal 0, @earlier_request.staffing_shortage_count
   end
 
-  test "register!は保存済みの勤務依頼を返す" do
+ test "register!は保存済みの勤務依頼を返す" do
+  work_request = nil
+
+  assert_difference("ChangeEvent.count", 1) do
     work_request = WorkRequest.register!(
       attributes: {
         business: @earlier_request.business,
@@ -119,10 +122,16 @@ class WorkRequestTest < ActiveSupport::TestCase
         status: :open
       }
     )
-
-    assert_predicate work_request, :persisted?
-    assert_equal "登録した依頼", work_request.title
   end
+
+  assert_predicate work_request, :persisted?
+  assert_equal "登録した依頼", work_request.title
+
+  assert_equal(
+    "勤務依頼「登録した依頼」を登録しました",
+    ChangeEvent.recent.first.summary
+  )
+end
 
   test "register!は保存失敗時にRecordInvalidを送出する" do
     assert_raises ActiveRecord::RecordInvalid do
@@ -134,18 +143,34 @@ class WorkRequestTest < ActiveSupport::TestCase
     end
   end
 
-  test "update_details!は更新済みの勤務依頼を返す" do
-    work_request = WorkRequest.update_details!(
+ test "update_details!は実質的な変更がない場合に変更記録を作らない" do
+  assert_no_difference("ChangeEvent.count") do
+    WorkRequest.update_details!(
       id: @earlier_request.id,
       attributes: {
-        title: "更新した依頼",
-        required_staff_count: 3
+        title: @earlier_request.title
       }
     )
+  end
+end
+  test "変更記録の保存に失敗した場合は勤務依頼の登録も取り消す" do
+    attributes = {
+      business: @earlier_request.business,
+      required_skill: @earlier_request.required_skill,
+      title: "取り消される依頼",
+      starts_at: Time.zone.local(2026, 8, 4, 10),
+      ends_at: Time.zone.local(2026, 8, 4, 12),
+      required_staff_count: 1,
+      status: :open
+    }
 
-    assert_equal @earlier_request, work_request
-    assert_equal "更新した依頼", work_request.title
-    assert_equal 3, work_request.required_staff_count
+    with_change_event_record_failure do
+      assert_no_difference("WorkRequest.count") do
+        assert_raises ActiveRecord::RecordInvalid do
+          WorkRequest.register!(attributes: attributes)
+        end
+      end
+    end
   end
 
   test "cancel!は取消状態へ変更した勤務依頼を返す" do
@@ -215,4 +240,17 @@ class WorkRequestTest < ActiveSupport::TestCase
       WorkRequest.remove!(id: missing_id)
     end
   end
+  private
+
+def with_change_event_record_failure
+  original = ChangeEvent.method(:record!)
+
+  ChangeEvent.define_singleton_method(:record!) do |**|
+    raise ActiveRecord::RecordInvalid.new(ChangeEvent.new)
+  end
+
+  yield
+ensure
+  ChangeEvent.define_singleton_method(:record!, original)
+end
 end
