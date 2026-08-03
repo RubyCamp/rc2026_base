@@ -1,0 +1,32 @@
+# Bundler
+/.bundle
+
+# Environment variables
+/.env
+/.env.*
+!/.env.example
+
+# Logs and temporary files
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Keep the PID directory but ignore its contents
+/tmp/pids/*
+!/tmp/pids/.keep
+
+# Uploaded and generated storage files
+/storage/*
+!/storage/.keep
+/tmp/storage/*
+!/tmp/storage/.keep
+
+# Generated assets
+/public/assets
+
+# Rails credentials key
+/config/master.key
+
+# Ruby LSP generated files
+/.ruby-lsp
