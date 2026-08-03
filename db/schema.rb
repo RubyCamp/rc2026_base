@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_03_141044) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -51,6 +51,27 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_141044) do
     t.text "notes"
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_businesses_on_name"
+  end
+
+  create_table "change_events", force: :cascade do |t|
+    t.string "action_type", null: false
+    t.datetime "created_at", null: false
+    t.datetime "occurred_at", null: false
+    t.string "review_status", default: "pending", null: false
+    t.datetime "reviewed_at"
+    t.string "source", default: "operation", null: false
+    t.text "summary", null: false
+    t.bigint "target_id"
+    t.string "target_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["occurred_at", "id"], name: "index_change_events_on_occurred_at_and_id"
+    t.index ["review_status"], name: "index_change_events_on_review_status"
+    t.index ["source"], name: "index_change_events_on_source"
+    t.index ["target_type", "target_id"], name: "index_change_events_on_target_type_and_target_id"
+    t.check_constraint "action_type::text = ANY (ARRAY['created'::character varying, 'updated'::character varying, 'cancelled'::character varying, 'deleted'::character varying, 'assigned'::character varying, 'confirmed'::character varying, 'unassigned'::character varying]::text[])", name: "change_events_action_type_check"
+    t.check_constraint "review_status::text = ANY (ARRAY['pending'::character varying, 'reviewed'::character varying]::text[])", name: "change_events_review_status_check"
+    t.check_constraint "source::text = ANY (ARRAY['operation'::character varying, 'seed'::character varying, 'debug'::character varying]::text[])", name: "change_events_source_check"
+    t.check_constraint "target_type::text = ANY (ARRAY['work_request'::character varying, 'availability'::character varying, 'assignment'::character varying]::text[])", name: "change_events_target_type_check"
   end
 
   create_table "skills", force: :cascade do |t|
