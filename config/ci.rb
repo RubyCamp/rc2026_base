@@ -8,9 +8,18 @@ CI.run do
   step "Security: Gem audit", "bin/bundler-audit"
   step "Security: Importmap vulnerability audit", "bin/importmap audit"
   step "Security: Brakeman code analysis", "bin/brakeman --quiet --no-pager --exit-on-warn --exit-on-error"
-  step "Tests: Rails", "bin/rails test"
-  step "Tests: Seeds", "env RAILS_ENV=test bin/rails db:seed:replant"
+  step "Assets: Precompile",
+     "env RAILS_ENV=production SECRET_KEY_BASE_DUMMY=1 bin/rails assets:precompile"
+  step "Tests: Reset database",
+     "env RAILS_ENV=test bin/rails db:test:purge && env RAILS_ENV=test bin/rails db:test:prepare"
 
+  step "Tests: Rails", "bin/rails test"
+
+  step "Tests: Seeds",
+      "env RAILS_ENV=test bin/rails db:seed:replant"
+
+  step "Tests: Restore database",
+      "env RAILS_ENV=test bin/rails db:test:purge && env RAILS_ENV=test bin/rails db:test:prepare"
   # Optional: Run system tests
   # step "Tests: System", "bin/rails test:system"
 
