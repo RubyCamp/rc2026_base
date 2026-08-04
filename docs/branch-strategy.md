@@ -1,0 +1,110 @@
+# ブランチ運用
+
+## 現在の構成
+
+共通基盤では、次のブランチを使用している。
+
+- `main`
+
+リモートには次のブランチが存在する。
+
+- `origin/main`
+
+共通基盤の確定した変更は`main`へ保存する。
+
+## 基本方針
+
+- 作業開始前に現在のブランチを確認する
+- 変更内容を確認してからcommitする
+- 動作確認が成功してからpushする
+- `main`の履歴を強制的に書き換えない
+- `git push --force`は使用しない
+- 他の作業者のcommitを勝手に削除しない
+
+## 作業開始時の確認
+
+```bash
+git branch
+git status
+git pull origin main
+```
+
+現在のブランチが`main`であることと、未保存の変更がないことを確認する。
+
+## 変更内容の確認
+
+```bash
+git status --short
+git diff
+git diff --check
+```
+
+`git diff --check`で何も表示されなければ、空白や改行に関する問題はない。
+
+## commit
+
+変更するファイルを確認してから追加する。
+
+```bash
+git add ファイル名
+git diff --cached
+git commit -m "変更内容を表すメッセージ"
+```
+
+すべてのファイルを無条件で追加するのではなく、対象ファイルを確認してから`git add`する。
+
+## push
+
+```bash
+git push origin main
+```
+
+push後はGitHub Actionsを確認し、すべてのjobが成功していることを確認する。
+
+## commit履歴の確認
+
+```bash
+git log --oneline -8
+```
+
+commit URLは次のコマンドで表示できる。
+
+```bash
+echo "https://github.com/RubyCamp/rc2026_base/commit/$(git rev-parse HEAD)"
+```
+
+## 現在の主な履歴
+
+共通基盤では、次のように機能単位でcommitしている。
+
+- データベース定義
+- 業務データの確認画面
+- 静的JSONとブラウザ保存
+- 変更記録の確認機能
+- 初回セットアップとCI
+- GitHub Actionsの修正
+- system test設定の整理
+
+## チームでbranchを追加する場合
+
+各チームが機能branchを利用する場合は、作業内容が分かる名前を付ける。
+
+例：
+
+```text
+feature/work-request-form
+feature/staff-assignment
+fix/availability-validation
+```
+
+作業完了後は、テストと差分を確認してから`main`へ統合する。
+
+## 禁止事項
+
+次の操作は、担当者間で確認せずに実行しない。
+
+```bash
+git reset --hard
+git push --force
+git branch -D ブランチ名
+```
