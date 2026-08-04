@@ -1,0 +1,90 @@
+<% content_for :title, "変更記録の表示確認" %>
+
+<p>
+  <%= link_to "勤務依頼一覧へ戻る",
+              root_path,
+              class: "link-secondary" %>
+</p>
+
+<div class="mb-4">
+  <p class="mb-1 text-danger fw-semibold">
+    開発環境専用
+  </p>
+
+  <h1 class="display-6 fw-bold">
+    変更記録の表示確認
+  </h1>
+
+  <p class="page-lead text-body-secondary">
+    変更管理画面を独立して確認するための補助機能です。
+    正式な業務操作の代わりには使用しません。
+  </p>
+</div>
+
+<section class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h2 class="h4 card-title">
+      表示確認用データを追加
+    </h2>
+
+    <div class="d-flex flex-wrap gap-2">
+      <%= button_to "未確認を1件追加",
+                    debug_change_events_path,
+                    params: { kind: "pending" },
+                    class: "btn btn-primary" %>
+
+      <%= button_to "確認済みを1件追加",
+                    debug_change_events_path,
+                    params: { kind: "reviewed" },
+                    class: "btn btn-outline-primary" %>
+
+      <%= button_to "見本を5件追加",
+                    debug_change_events_path,
+                    params: { kind: "examples" },
+                    class: "btn btn-outline-secondary" %>
+    </div>
+  </div>
+</section>
+
+<section class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h4 card-title">
+      デバッグ記録
+    </h2>
+
+    <% if @change_events.any? %>
+      <ul class="list-group list-group-flush">
+        <% @change_events.each do |change_event| %>
+          <li class="list-group-item px-0
+                     d-flex flex-column flex-md-row
+                     justify-content-between
+                     align-items-md-center gap-3">
+            <span>
+              <strong><%= change_event.summary %></strong>
+              <br>
+
+              <small class="text-body-secondary">
+                <%= l change_event.occurred_at, format: :long %>
+              </small>
+            </span>
+
+            <%= button_to "この記録を削除",
+                          debug_change_event_path(change_event),
+                          method: :delete,
+                          class: "btn btn-outline-danger btn-sm",
+                          form: {
+                            data: {
+                              turbo_confirm:
+                                "このデバッグ記録を削除しますか？"
+                            }
+                          } %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="mb-0 text-body-secondary">
+        表示確認用の変更記録はありません。
+      </p>
+    <% end %>
+  </div>
+</section>

@@ -1,4 +1,31 @@
 class ChangeEvent < ApplicationRecord
+    DEBUG_EXAMPLES = [
+    [
+      :work_request,
+      :created,
+      "表示確認用：勤務依頼を登録しました"
+    ],
+    [
+      :work_request,
+      :updated,
+      "表示確認用：勤務依頼を更新しました"
+    ],
+    [
+      :availability,
+      :updated,
+      "表示確認用：勤務可否を更新しました"
+    ],
+    [
+      :assignment,
+      :assigned,
+      "表示確認用：スタッフを仮割当しました"
+    ],
+    [
+      :assignment,
+      :unassigned,
+      "表示確認用：スタッフの割当を解除しました"
+    ]
+  ].freeze
   enum :target_type,
        {
          work_request: "work_request",
@@ -62,6 +89,7 @@ class ChangeEvent < ApplicationRecord
     review_status: :pending,
     reviewed_at: nil
   )
+      ensure_debug_enabled! if source.to_s == "debug"
     create!(
       target_type: target_type,
       target_id: target_id,
@@ -73,7 +101,39 @@ class ChangeEvent < ApplicationRecord
       reviewed_at: reviewed_at
     )
   end
+  def self.create_debug!(review_status: :pending)
+    reviewed_at =
+      if review_status.to_s == "reviewed"
+        Time.current
+      end
 
+    record!(
+      target_type: :work_request,
+      target_id: nil,
+      action_type: :updated,
+      summary: "表示確認用の変更記録です",
+      source: :debug,
+      review_status: review_status,
+      reviewed_at: reviewed_at
+    )
+  end
+
+  def self.create_debug_examples!
+    transaction do
+      DEBUG_EXAMPLES.each_with_index.map do |example, index|
+        target_type, action_type, summary = example
+
+        record!(
+          target_type: target_type,
+          target_id: nil,
+          action_type: action_type,
+          summary: summary,
+          occurred_at: Time.current - index.minutes,
+          source: :debug
+        )
+      end
+    end
+  end
   def self.mark_reviewed!(id:)
     find(id).tap do |change_event|
       next if change_event.review_status_reviewed?
@@ -101,8 +161,23 @@ class ChangeEvent < ApplicationRecord
     end
   end
 
-  def self.debug_enabled?
+    def self.debug_enabled?
     Rails.env.development? &&
       ENV["ENABLE_CHANGE_EVENT_DEBUG"] == "true"
   end
+
+  def self.ensure_debug_enabled!
+    return if debug_enabled?
+
+    change_event = new
+
+    change_event.errors.add(
+      :base,
+      "変更記録のデバッグ機能は無効です"
+    )
+
+    raise ActiveRecord::RecordInvalid, change_event
+  end
+
+  private_class_method :ensure_debug_enabled!
 end

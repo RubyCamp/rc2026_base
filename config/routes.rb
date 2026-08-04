@@ -18,4 +18,12 @@ Rails.application.routes.draw do
   get "examples/local-data",
     to: "examples#local_data",
     as: :examples_local_data
+
+    if Rails.env.development? &&
+    ENV["ENABLE_CHANGE_EVENT_DEBUG"] == "true"
+      namespace :debug do
+        resources :change_events,
+                  only: %i[index create destroy]
+      end
+    end
 end

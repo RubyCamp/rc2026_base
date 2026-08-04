@@ -75,22 +75,23 @@ class ChangeEventTest < ActiveSupport::TestCase
   end
 
   test "remove_debug!は条件を満たしたデバッグ記録だけ削除する" do
-    debug_event = ChangeEvent.record!(
-      target_type: :work_request,
-      target_id: nil,
-      action_type: :updated,
-      summary: "表示確認用の変更です",
-      source: :debug
-    )
+  with_rails_env("development") do
+    with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
+      debug_event = ChangeEvent.record!(
+        target_type: :work_request,
+        target_id: nil,
+        action_type: :updated,
+        summary: "表示確認用の変更です",
+        source: :debug
+      )
 
-    with_rails_env("development") do
-      with_env("ENABLE_CHANGE_EVENT_DEBUG", "true") do
-        removed = ChangeEvent.remove_debug!(id: debug_event.id)
+      removed =
+        ChangeEvent.remove_debug!(id: debug_event.id)
 
-        assert_predicate removed, :destroyed?
-      end
+      assert_predicate removed, :destroyed?
     end
   end
+end
 
   test "remove_debug!は正式な変更記録を削除しない" do
     with_rails_env("development") do
@@ -124,13 +125,12 @@ end
 
   private
 
-  def with_env(name, value)
-    previous = ENV[name]
-    ENV[name] = value
-    yield
-  ensure
-    ENV[name] = previous
-  end
+def with_env(name, value)
+  previous = ENV[name]
+  ENV[name] = value
+  yield
+ensure
+  ENV[name] = previous
 end
 
 def with_rails_env(name)
@@ -144,4 +144,5 @@ def with_rails_env(name)
   yield
 ensure
   Rails.instance_variable_set(:@_env, previous)
+end
 end
