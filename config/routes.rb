@@ -15,4 +15,7 @@ Rails.application.routes.draw do
 
   resources :work_requests, only: [ :index, :show ]
   resources :staff_members, only: [ :index ]
+  get "examples/local-data",
+    to: "examples#local_data",
+    as: :examples_local_data
 end
