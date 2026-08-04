@@ -1,28 +1,91 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
-    <title><%= content_for(:title) || "Rc2026 Base" %></title>
+    <title><%= content_for(:title) || "勤務調整システム" %></title>
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="application-name" content="Rc2026 Base">
+    <meta name="application-name" content="勤務調整システム">
     <meta name="mobile-web-app-capable" content="yes">
+
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
 
     <%= yield :head %>
 
-    <%# Enable PWA manifest for installable apps (make sure to enable in config/routes.rb too!) %>
-    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
-
     <link rel="icon" href="/icon.png" type="image/png">
     <link rel="icon" href="/icon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/icon.png">
 
-    <%# Includes all stylesheet files in app/assets/stylesheets %>
-    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "bootstrap.min",
+                            "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application",
+                            "data-turbo-track": "reload" %>
+
+    <%= javascript_include_tag "bootstrap.bundle.min",
+                               defer: true,
+                               "data-turbo-track": "reload" %>
   </head>
 
-  <body>
-    <%= yield %>
+  <body class="bg-body-tertiary">
+    <header>
+      <nav
+        class="navbar navbar-expand-md bg-dark border-bottom"
+        data-bs-theme="dark"
+        aria-label="メインメニュー"
+      >
+        <div class="container">
+          <%= link_to "勤務調整システム",
+                      root_path,
+                      class: "navbar-brand fw-semibold" %>
+
+          <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#main-navigation"
+            aria-controls="main-navigation"
+            aria-expanded="false"
+            aria-label="メニューを開く"
+          >
+            <span class="navbar-toggler-icon"></span>
+          </button>
+
+          <div
+            id="main-navigation"
+            class="collapse navbar-collapse"
+          >
+            <ul class="navbar-nav ms-auto">
+              <li class="nav-item">
+                <%= link_to "勤務依頼",
+                            work_requests_path,
+                            class: "nav-link" %>
+              </li>
+
+              <li class="nav-item">
+                <%= link_to "スタッフ",
+                            staff_members_path,
+                            class: "nav-link" %>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <main class="container py-4 py-md-5">
+      <% if notice.present? %>
+        <div class="alert alert-success" role="status">
+          <%= notice %>
+        </div>
+      <% end %>
+
+      <% if alert.present? %>
+        <div class="alert alert-danger" role="alert">
+          <%= alert %>
+        </div>
+      <% end %>
+
+      <%= yield %>
+    </main>
   </body>
 </html>

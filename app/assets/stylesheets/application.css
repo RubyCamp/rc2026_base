@@ -8,3 +8,41 @@
  *
  * Consider organizing styles into separate files for maintainability.
  */
+/*
+ * Bootstrapを共通UIとして使用する。
+ * このファイルにはBootstrapだけでは表現しにくい
+ * 最小限の調整だけを書く。
+ */
+
+body {
+  min-height: 100vh;
+}
+
+.page-lead {
+  max-width: 48rem;
+}
+
+.work-request-card {
+  border-top: 0.25rem solid var(--bs-primary);
+}
+
+.definition-list > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.5rem;
+  border-top:
+    var(--bs-border-width)
+    solid
+    var(--bs-border-color);
+}
+
+.definition-list dt {
+  color: var(--bs-secondary-color);
+  font-weight: 500;
+}
+
+.definition-list dd {
+  margin: 0;
+  text-align: right;
+}
