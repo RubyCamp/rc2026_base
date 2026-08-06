@@ -99,9 +99,3 @@ bin/ci
 - [エディター設定](docs/editor-setup.md)
 - [画面実装方針](docs/ui-guidelines.md)
 - [外部アセット](docs/third-party-assets.md)
-
-## 正本手順書
-
-実装手順、確認項目、スクリーンショットの記録は、次のNotionページを正本とします。
-
-https://app.notion.com/p/221657834956832c970d81762139ff46
