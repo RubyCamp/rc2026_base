@@ -20,10 +20,10 @@ class Assignment < ApplicationRecord
           staff_skills: :skill,
           skills: {},
           availabilities: {},
-          assignments: { work_request: { assignments: {} } }
+          assignments: { work_request: {} }
         }
       },
-      work_request: [ :business, :required_skill, :assignments ]
+      work_request: [ :business, :required_skill ]
     )
       .where(status: :draft)
       .order("work_requests.starts_at", :created_at)
@@ -39,6 +39,7 @@ class Assignment < ApplicationRecord
     assignments_by_staff = staff_members.to_h do |staff_member|
       [ staff_member.id, staff_member.assignments.to_a ]
     end
+    assignment_counts = assignment_counts_by_work_request(assignments_by_staff)
     time_conflict_ids = time_conflict_ids_by_staff(assignments_by_staff)
 
     assignments_by_staff.values.flatten.uniq.each_with_object({}) do |assignment, judgments|
@@ -47,7 +48,7 @@ class Assignment < ApplicationRecord
       skilled = staff_member&.active? && staff_skill_ids
         .fetch(assignment.staff_member_id, {})
         .key?(work_request.required_skill_id)
-      staffing_shortage = work_request.assignments.size < work_request.required_staff_count
+      staffing_shortage = assignment_counts.fetch(work_request.id, 0) < work_request.required_staff_count
 
       judgments[assignment.id] = {
         skill_missing: !skilled,
@@ -56,6 +57,18 @@ class Assignment < ApplicationRecord
       }
     end
   end
+
+  def self.assignment_counts_by_work_request(assignments_by_staff)
+    work_request_ids = assignments_by_staff.values.flatten.map(&:work_request_id).compact.uniq
+    return {} if work_request_ids.empty?
+
+    WorkRequest
+      .where(id: work_request_ids)
+      .left_joins(:assignments)
+      .group(:id)
+      .count("assignments.id")
+  end
+  private_class_method :assignment_counts_by_work_request
 
   def self.time_conflict_ids_by_staff(assignments_by_staff)
     assignments_by_staff.values.each_with_object({}) do |staff_assignments, conflict_ids|

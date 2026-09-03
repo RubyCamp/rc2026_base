@@ -36,6 +36,33 @@ class ListViewsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#shiftModal-#{StaffMember.first.id}"
   end
 
+  test "確認一覧のpreloadはスタッフの依頼を再帰的に読み込まない" do
+    assignments = Assignment.draft_for_confirmation.to_a
+    staff_assignments = assignments.flat_map { |assignment| assignment.staff_member.assignments }
+
+    assert_not_empty assignments
+    assert assignments.all? { |assignment| assignment.staff_member.association(:assignments).loaded? }
+    assert staff_assignments.all? { |assignment| assignment.association(:work_request).loaded? }
+    assert staff_assignments.none? { |assignment| assignment.work_request.association(:assignments).loaded? }
+  end
+
+  test "一括判定は既存の個別判定結果と一致する" do
+    assignments = Assignment.draft_for_confirmation.to_a
+    judgments = Assignment.judgments_for(assignments)
+
+    assignments.each do |assignment|
+      work_request = assignment.work_request
+      assert_equal(
+        {
+          skill_missing: !StaffMember.skilled_for(work_request_id: work_request.id).exists?(id: assignment.staff_member_id),
+          staffing_shortage: !work_request.staffing_sufficient?,
+          time_conflict: Assignment.time_conflict?(id: assignment.id)
+        },
+        judgments.fetch(assignment.id)
+      )
+    end
+  end
+
   private
 
   def count_sql_queries

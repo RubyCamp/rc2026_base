@@ -4,7 +4,7 @@ class StaffMembersController < ApplicationController
       .includes(
         :skills,
         :availabilities,
-        assignments: { work_request: [ :business, :assignments ] }
+        assignments: { work_request: {} }
       )
       .order(:name)
       .to_a
