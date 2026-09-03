@@ -112,6 +112,8 @@
     </header>
 
     <main class="container py-4 py-md-5">
+      <%= render "shared/page_ownership" %>
+
       <% if notice.present? %>
         <div class="alert alert-success" role="status">
           <%= notice %>
