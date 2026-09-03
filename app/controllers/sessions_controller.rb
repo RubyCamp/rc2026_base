@@ -7,7 +7,14 @@ class SessionsController < ApplicationController
   def create
     session[:role] = params[:role]
     session[:business_id] = params[:role] == "business" ? params[:business_id] : nil
-    redirect_to root_path
+    redirect_to case session[:role]
+                when "admin"
+                  admin_calendar_path
+                when "business"
+                  provider_detail_path
+                else
+                  guide_path
+                end
   end
 
   def destroy

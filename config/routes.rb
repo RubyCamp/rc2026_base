@@ -1,7 +1,7 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
-  root "home#index"
+  root "guide#index"
 
   get "guide", to: "guide#index", as: :guide
 
