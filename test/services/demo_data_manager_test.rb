@@ -11,11 +11,22 @@ class DemoDataManagerTest < ActiveSupport::TestCase
 
     assert_equal 1, DemoDataBatch.active.count
     assert_equal 20260903, batch.seed
-    assert_includes (8..12), Business.where(id: batch.tracked_ids("Business")).count
-    assert_includes (8..12), Skill.where(id: batch.tracked_ids("Skill")).count
-    assert_includes (30..45), StaffMember.where(id: batch.tracked_ids("StaffMember")).count
-    assert_operator WorkRequest.where(id: batch.tracked_ids("WorkRequest")).count,
-      :>=, DemoData::Generator::MONTHLY_MINIMUMS[:work_requests] * months.length
+    assert_equal DemoData::Generator::DEMO_BUSINESS_COUNT,
+      Business.where(id: batch.tracked_ids("Business")).count
+    assert_equal DemoData::Generator::DEMO_SKILL_COUNT,
+      Skill.where(id: batch.tracked_ids("Skill")).count
+    assert_equal DemoData::Generator::DEMO_STAFF_COUNT,
+      StaffMember.where(id: batch.tracked_ids("StaffMember")).count
+    assert_equal (months.length * 2) + 7, WorkRequest.where(id: batch.tracked_ids("WorkRequest")).count
+    assert_equal (months.length * 2) + 6, Assignment.where(id: batch.tracked_ids("Assignment")).count
+    assert_equal (months.length * DemoData::Generator::MONTHLY_MINIMUMS[:availabilities]) + 5,
+      Availability.where(id: batch.tracked_ids("Availability")).count
+    assert_equal 99, ChangeEvent.where(id: batch.tracked_ids("ChangeEvent")).count
+
+    assert_includes (42..48), WorkRequest.where(id: batch.tracked_ids("WorkRequest")).count
+    assert_includes (40..55), Assignment.where(id: batch.tracked_ids("Assignment")).count
+    assert_includes (80..130), Availability.where(id: batch.tracked_ids("Availability")).count
+    assert_includes (50..100), ChangeEvent.where(id: batch.tracked_ids("ChangeEvent")).count
 
     assert_operator WorkRequest.where(starts_at: Time.zone.today.all_day).count, :positive?
     assert_predicate Availability.available, :any?
@@ -52,6 +63,9 @@ class DemoDataManagerTest < ActiveSupport::TestCase
       .where(id: batch.tracked_ids("StaffMember")), :any?
     assert_predicate owned_requests.where("notes LIKE ?", "%交通%").where(starts_at: Time.zone.today.all_month), :any?
 
+    assert_equal 9, owned_requests.where(starts_at: Time.zone.today.all_month).count
+    assert_equal 0, orphaned_owned_records(batch)
+
     assert_monthly_coverage(batch)
   end
 
@@ -70,6 +84,26 @@ class DemoDataManagerTest < ActiveSupport::TestCase
       assert_owned_dates_within(batch, "Availability", :starts_at, start_month, end_month)
       assert_owned_dates_within(batch, "ChangeEvent", :occurred_at, start_month, end_month)
       assert_monthly_coverage(batch)
+    end
+  end
+
+  test "月初と月末でも現行月の固定ケースと全月カバレッジを維持する" do
+    [ Date.new(2027, 2, 1), Date.new(2027, 2, 28) ].each do |date|
+      travel_to Time.zone.local(date.year, date.month, date.day, 10) do
+        batch = DemoData::Manager.generate!(seed: date.day)
+        current_month = DemoData::Generator.months_for(Time.zone.today).fetch(DemoData::Generator::MONTHS_BEFORE)
+
+        month_range = month_time_range(current_month)
+        assert_equal 9, WorkRequest.where(id: batch.tracked_ids("WorkRequest"), starts_at: month_range).count
+        assert_equal 9, Availability.where(id: batch.tracked_ids("Availability"), starts_at: month_range).count
+        assert_equal 8,
+          Assignment.joins(:work_request)
+            .where(id: batch.tracked_ids("Assignment"), work_requests: { starts_at: month_range })
+            .count
+        assert_monthly_coverage(batch)
+        assert_equal 0, orphaned_owned_records(batch)
+        DemoData::Manager.cleanup!
+      end
     end
   end
 
@@ -181,18 +215,30 @@ class DemoDataManagerTest < ActiveSupport::TestCase
       availability_ids = batch.tracked_ids("Availability")
       change_event_ids = batch.tracked_ids("ChangeEvent")
 
-      work_requests = WorkRequest.where(id: work_request_ids, starts_at: month.all_month)
-      availabilities = Availability.where(id: availability_ids, starts_at: month.all_month)
+      month_range = month_time_range(month)
+      work_requests = WorkRequest.where(id: work_request_ids, starts_at: month_range)
+      availabilities = Availability.where(id: availability_ids, starts_at: month_range)
       assignments = Assignment
         .joins(:work_request)
-        .where(id: assignment_ids, work_requests: { starts_at: month.all_month })
-      change_events = ChangeEvent.where(id: change_event_ids, occurred_at: month.all_month)
+        .where(id: assignment_ids, work_requests: { starts_at: month_range })
+      change_events = ChangeEvent.where(id: change_event_ids, occurred_at: month_range)
 
       assert_operator work_requests.count, :>=, minimums[:work_requests], month.to_s
       assert_operator availabilities.count, :>=, minimums[:availabilities], month.to_s
       assert_operator assignments.draft.count, :>=, minimums[:draft_assignments], month.to_s
       assert_operator assignments.confirmed.count, :>=, minimums[:confirmed_assignments], month.to_s
       assert_operator change_events.count, :>=, minimums[:change_events], month.to_s
+
+      if month == months[DemoData::Generator::MONTHS_BEFORE]
+        assert_equal 9, work_requests.count, "#{month} current month work requests"
+        assert_equal 8, assignments.count, "#{month} current month assignments"
+      else
+        assert_equal 2, work_requests.count, "#{month} non-current month work requests"
+        assert_equal 2, assignments.count, "#{month} non-current month assignments"
+      end
+      expected_availability_count = month == months[DemoData::Generator::MONTHS_BEFORE] ? 9 : 4
+      assert_equal expected_availability_count, availabilities.count, "#{month} monthly availabilities"
+      assert_operator change_events.count, :>=, 2, "#{month} monthly change events"
     end
   end
 
@@ -206,11 +252,21 @@ class DemoDataManagerTest < ActiveSupport::TestCase
     assert_operator dates.max, :<=, upper_bound
   end
 
+  def month_time_range(month)
+    month.beginning_of_month.in_time_zone..month.end_of_month.end_of_day.in_time_zone
+  end
+
   def duplicate_owned_records(batch)
     batch.demo_data_records
       .group(:record_type, :record_id)
       .having("COUNT(*) > 1")
       .count
       .length
+  end
+
+  def orphaned_owned_records(batch)
+    batch.demo_data_records.count do |record|
+      !DemoData::Manager::TRACKED_TYPES.fetch(record.record_type).exists?(record.record_id)
+    end
   end
 end
