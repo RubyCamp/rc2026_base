@@ -16,6 +16,12 @@ Rails.application.routes.draw do
   namespace :admin do
     get "calendar", to: "calendar#index"
     resources :details, only: [ :show ]
+    get "demo_data", to: "demo_data#index", as: :demo_data
+    post "demo_data/authenticate", to: "demo_data#authenticate", as: :authenticate_demo_data
+    delete "demo_data/session", to: "demo_data#relock", as: :relock_demo_data
+    post "demo_data/batches", to: "demo_data#create", as: :demo_data_batches
+    patch "demo_data/reset", to: "demo_data#reset", as: :reset_demo_data
+    delete "demo_data", to: "demo_data#destroy"
   end
 
   namespace :provider do

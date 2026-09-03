@@ -92,6 +92,10 @@
                 <%= link_to "変更履歴", change_events_path, class: "nav-link" %>
               </li>
 
+              <li class="nav-item">
+                <%= link_to "デモ管理", admin_demo_data_path, class: "nav-link" %>
+              </li>
+
               <% if session[:role].present? %>
                 <li class="nav-item">
                   <%= button_to "ログアウト", logout_path, method: :delete, class: "nav-link border-0 bg-transparent" %>

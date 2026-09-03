@@ -1,0 +1,116 @@
+<% content_for :title, "デモデータ管理" %>
+
+<% if @pin_required %>
+  <div class="mb-4">
+    <p class="mb-1 text-primary fw-semibold">管理ツール</p>
+    <h1 class="display-6 fw-bold">デモデータ管理</h1>
+    <p class="page-lead text-body-secondary">デモ用の勤務調整データを確認・生成します。</p>
+  </div>
+
+  <section class="card shadow-sm" style="max-width: 32rem;">
+    <div class="card-body">
+      <h2 class="h5">PINを入力</h2>
+      <p class="text-body-secondary">このページはデモ環境のデータ管理用です。PINはサーバー側で検証され、保存されません。</p>
+      <%= form_with url: admin_authenticate_demo_data_path, method: :post, scope: :demo_data, local: true do |form| %>
+        <%= form.label :pin, "管理PIN", class: "form-label" %>
+        <%= form.password_field :pin, class: "form-control", inputmode: "numeric", autocomplete: "one-time-code", required: true %>
+        <%= form.submit "管理画面を開く", class: "btn btn-primary mt-3" %>
+      <% end %>
+    </div>
+  </section>
+<% else %>
+  <div class="mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+      <div>
+        <p class="mb-1 text-primary fw-semibold">管理ツール</p>
+        <h1 class="display-6 fw-bold">デモデータ管理</h1>
+      </div>
+      <%= button_to "ロックする", admin_relock_demo_data_path, method: :delete, class: "btn btn-outline-secondary" %>
+    </div>
+    <p class="page-lead text-body-secondary">生成したデモデータだけを所有権情報で管理します。手動で登録したデータは削除対象になりません。</p>
+  </div>
+
+  <section class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h2 class="h5">現在の件数</h2>
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead><tr><th>データ種別</th><th>全体</th><th>生成デモ</th></tr></thead>
+          <tbody>
+            <% {
+              "Business" => "事業者",
+              "Skill" => "スキル",
+              "StaffMember" => "スタッフ",
+              "StaffSkill" => "スタッフスキル",
+              "Availability" => "勤務可否",
+              "WorkRequest" => "勤務依頼",
+              "Assignment" => "割当",
+              "ChangeEvent" => "変更履歴"
+            }.each do |type, label| %>
+              <tr><th scope="row"><%= label %></th><td><%= @summary[:current][type] %></td><td><%= @summary[:demo][type] %></td></tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="row g-4">
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5">ランダムバッチを追加</h2>
+          <p class="text-body-secondary">事業者・スタッフ・スキル・勤務依頼・割当・変更履歴を一式追加します。日付は今日を中心に分散します。</p>
+          <%= form_with url: admin_demo_data_batches_path, method: :post, local: true do |form| %>
+            <%= form.label :seed, "再現用シード（任意）", class: "form-label" %>
+            <%= form.number_field :seed, class: "form-control", min: 1 %>
+            <%= form.submit "デモバッチを追加", class: "btn btn-primary mt-3" %>
+          <% end %>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 shadow-sm border-warning">
+        <div class="card-body">
+          <h2 class="h5">基準状態へ戻す</h2>
+          <p class="text-body-secondary">所有権付きの生成データを依存順に削除し、基準デモバッチを1つ生成します。手動データは残ります。</p>
+          <%= form_with url: admin_reset_demo_data_path, method: :patch, local: true do |form| %>
+            <%= form.label :seed, "基準シード（任意）", class: "form-label" %>
+            <%= form.number_field :seed, class: "form-control", min: 1 %>
+            <div class="form-check mt-3"><%= check_box_tag :confirm, "1", false, class: "form-check-input", required: true %><%= label_tag :confirm, "内容を確認しました", class: "form-check-label" %></div>
+            <%= form.submit "基準状態へ戻す", class: "btn btn-warning mt-3", data: { turbo_confirm: "生成したデモデータを全て入れ替えます。手動データは残ります。続けますか？" } %>
+          <% end %>
+        </div>
+      </article>
+    </div>
+
+    <div class="col-12 col-lg-4">
+      <article class="card h-100 shadow-sm border-danger">
+        <div class="card-body">
+          <h2 class="h5">生成データを削除</h2>
+          <p class="text-body-secondary">所有権テーブルに記録された生成データだけを削除します。繰り返し実行しても安全です。</p>
+          <%= form_with url: admin_demo_data_path, method: :delete, local: true do |form| %>
+            <div class="form-check"><%= check_box_tag :confirm, "1", false, class: "form-check-input", required: true %><%= label_tag :confirm, "内容を確認しました", class: "form-check-label" %></div>
+            <%= form.submit "生成データを削除", class: "btn btn-outline-danger mt-3", data: { turbo_confirm: "生成したデモデータだけを削除します。手動データは残ります。続けますか？" } %>
+          <% end %>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="card shadow-sm mt-4">
+    <div class="card-body">
+      <h2 class="h5">生成バッチ</h2>
+      <% if @summary[:batches].any? %>
+        <ul class="mb-0">
+          <% @summary[:batches].each do |batch| %>
+            <li><%= batch.label %>（seed: <%= batch.seed %>、<%= l batch.created_at, format: :short %>）</li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-body-secondary mb-0">生成済みのデモバッチはありません。</p>
+      <% end %>
+    </div>
+  </section>
+<% end %>

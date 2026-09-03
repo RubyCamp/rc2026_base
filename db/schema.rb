@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
+ActiveRecord::Schema[8.1].define(version: 2026_09_03_000000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -74,6 +74,30 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
     t.check_constraint "target_type::text = ANY (ARRAY['work_request'::character varying::text, 'availability'::character varying::text, 'assignment'::character varying::text])", name: "change_events_target_type_check"
   end
 
+  create_table "demo_data_batches", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "identifier", null: false
+    t.string "label", null: false
+    t.bigint "seed", null: false
+    t.string "status", default: "active", null: false
+    t.datetime "updated_at", null: false
+    t.index ["created_at"], name: "index_demo_data_batches_on_created_at"
+    t.index ["identifier"], name: "index_demo_data_batches_on_identifier", unique: true
+    t.check_constraint "status::text = ANY (ARRAY['active'::character varying, 'cleaned'::character varying]::text[])", name: "demo_data_batches_status_check"
+  end
+
+  create_table "demo_data_records", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.bigint "demo_data_batch_id", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["demo_data_batch_id", "record_type", "record_id"], name: "index_demo_data_records_on_batch_and_record", unique: true
+    t.index ["demo_data_batch_id"], name: "index_demo_data_records_on_demo_data_batch_id"
+    t.index ["record_type", "record_id"], name: "index_demo_data_records_on_record", unique: true
+    t.check_constraint "record_type::text = ANY (ARRAY['Business'::character varying, 'Skill'::character varying, 'StaffMember'::character varying, 'StaffSkill'::character varying, 'Availability'::character varying, 'WorkRequest'::character varying, 'Assignment'::character varying, 'ChangeEvent'::character varying]::text[])", name: "demo_data_records_type_check"
+  end
+
   create_table "skills", force: :cascade do |t|
     t.boolean "active", default: true, null: false
     t.string "code", null: false
@@ -128,6 +152,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_03_172749) do
   add_foreign_key "assignments", "staff_members"
   add_foreign_key "assignments", "work_requests"
   add_foreign_key "availabilities", "staff_members"
+  add_foreign_key "demo_data_records", "demo_data_batches", on_delete: :cascade
   add_foreign_key "staff_skills", "skills"
   add_foreign_key "staff_skills", "staff_members"
   add_foreign_key "work_requests", "businesses"
