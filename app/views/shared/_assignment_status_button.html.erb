@@ -1,12 +1,14 @@
 <div id="assignment-status-<%= assignment.id %>" class="d-inline">
   <% if assignment.draft? %>
     <% work_request = assignment.work_request %>
-    <% skill_missing = !StaffMember.skilled_for(work_request_id: work_request.id).exists?(id: assignment.staff_member_id) %>
-    <% time_conflict = Assignment.time_conflict?(id: assignment.id) %>
+    <% judgment = local_assigns[:judgment] %>
+    <% skill_missing = judgment ? judgment[:skill_missing] : !StaffMember.skilled_for(work_request_id: work_request.id).exists?(id: assignment.staff_member_id) %>
+    <% time_conflict = judgment ? judgment[:time_conflict] : Assignment.time_conflict?(id: assignment.id) %>
     <% issues = [] %>
     <% issues << "スキル不足" if skill_missing %>
     <% issues << "時間重複" if time_conflict %>
-    <% issues << "人数不足" unless work_request.staffing_sufficient? %>
+    <% staffing_shortage = judgment ? judgment[:staffing_shortage] : !work_request.staffing_sufficient? %>
+    <% issues << "人数不足" if staffing_shortage %>
     <% if issues.any? %>
       <span class="badge text-bg-danger me-2">仮割り当て（<%= issues.join("・") %>）</span>
     <% else %>

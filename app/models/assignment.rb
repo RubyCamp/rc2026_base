@@ -15,12 +15,70 @@ class Assignment < ApplicationRecord
 
   def self.draft_for_confirmation
     includes(
-      { staff_member: { staff_skills: :skill } },
-      work_request: [ :business, :required_skill ]
+      {
+        staff_member: {
+          staff_skills: :skill,
+          skills: {},
+          availabilities: {},
+          assignments: { work_request: { assignments: {} } }
+        }
+      },
+      work_request: [ :business, :required_skill, :assignments ]
     )
       .where(status: :draft)
       .order("work_requests.starts_at", :created_at)
   end
+
+  def self.judgments_for(assignments, staff_members: nil)
+    assignments = assignments.to_a
+    staff_members ||= assignments.map(&:staff_member).uniq
+    staff_by_id = staff_members.index_by(&:id)
+    staff_skill_ids = staff_members.to_h do |staff_member|
+      [ staff_member.id, staff_member.staff_skills.to_h { |staff_skill| [ staff_skill.skill_id, true ] } ]
+    end
+    assignments_by_staff = staff_members.to_h do |staff_member|
+      [ staff_member.id, staff_member.assignments.to_a ]
+    end
+    time_conflict_ids = time_conflict_ids_by_staff(assignments_by_staff)
+
+    assignments_by_staff.values.flatten.uniq.each_with_object({}) do |assignment, judgments|
+      work_request = assignment.work_request
+      staff_member = staff_by_id[assignment.staff_member_id]
+      skilled = staff_member&.active? && staff_skill_ids
+        .fetch(assignment.staff_member_id, {})
+        .key?(work_request.required_skill_id)
+      staffing_shortage = work_request.assignments.size < work_request.required_staff_count
+
+      judgments[assignment.id] = {
+        skill_missing: !skilled,
+        staffing_shortage: staffing_shortage,
+        time_conflict: time_conflict_ids.key?(assignment.id)
+      }
+    end
+  end
+
+  def self.time_conflict_ids_by_staff(assignments_by_staff)
+    assignments_by_staff.values.each_with_object({}) do |staff_assignments, conflict_ids|
+      active_assignments = staff_assignments
+        .select { |assignment| !assignment.work_request.cancelled? }
+        .sort_by { |assignment| assignment.work_request.starts_at }
+
+      previous_max_end = nil
+      active_assignments.each do |assignment|
+        work_request = assignment.work_request
+        conflict_ids[assignment.id] = true if previous_max_end && previous_max_end > work_request.starts_at
+        previous_max_end = [ previous_max_end, work_request.ends_at ].compact.max
+      end
+
+      active_assignments.each_cons(2) do |assignment, next_assignment|
+        next unless next_assignment.work_request.starts_at < assignment.work_request.ends_at
+
+        conflict_ids[assignment.id] = true
+        conflict_ids[next_assignment.id] = true
+      end
+    end
+  end
+  private_class_method :time_conflict_ids_by_staff
 
   def self.overlapping_for(id:)
     assignment = find(id)

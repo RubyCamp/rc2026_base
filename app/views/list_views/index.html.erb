@@ -63,9 +63,10 @@
     <% @assignments.each do |assignment| %>
       <% staff_member = assignment.staff_member %>
       <% work_request = assignment.work_request %>
-      <% skill_missing = !StaffMember.skilled_for(work_request_id: work_request.id).exists?(id: staff_member.id) %>
-      <% staffing_shortage = !work_request.staffing_sufficient? %>
-      <% time_conflict = Assignment.time_conflict?(id: assignment.id) %>
+      <% judgment = @assignment_judgments.fetch(assignment.id) %>
+      <% skill_missing = judgment[:skill_missing] %>
+      <% staffing_shortage = judgment[:staffing_shortage] %>
+      <% time_conflict = judgment[:time_conflict] %>
       <% has_warning = skill_missing || staffing_shortage || time_conflict %>
 
       <div class="col-12 col-md-4">
@@ -97,7 +98,7 @@
             <% end %>
           </div>
         </article>
-        <%= render "shared/shift_modal", staff_member: staff_member, modal_id: "shiftModal-#{assignment.id}" %>
+        <%= render "shared/shift_modal", staff_member: staff_member, modal_id: "shiftModal-#{assignment.id}", assignment_judgments: @assignment_judgments %>
       </div>
     <% end %>
   </div>

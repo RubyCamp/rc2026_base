@@ -4,6 +4,8 @@ class ListViewsController < ApplicationController
     assignments = Assignment.draft_for_confirmation
     assignments = assignments.where(work_requests: { business_id: params[:business_id] }) if params[:business_id].present?
     assignments = filter_assignments_by_date(assignments)
+    assignments = assignments.to_a
+    @assignment_judgments = Assignment.judgments_for(assignments)
     @assignments = assignments.select { |assignment| judgment_match?(assignment) }
   end
 
@@ -87,24 +89,19 @@ class ListViewsController < ApplicationController
   end
 
   def judgment_match?(assignment)
-    work_request = assignment.work_request
-    skill_missing = !StaffMember
-      .skilled_for(work_request_id: work_request.id)
-      .exists?(id: assignment.staff_member_id)
-    staffing_shortage = !work_request.staffing_sufficient?
-    time_conflict = Assignment.time_conflict?(id: assignment.id)
+    judgment = @assignment_judgments.fetch(assignment.id)
 
     case params[:judgment]
     when "attention"
-      skill_missing || staffing_shortage || time_conflict
+      judgment.values_at(:skill_missing, :staffing_shortage, :time_conflict).any?
     when "ok"
-      !skill_missing && !staffing_shortage && !time_conflict
+      judgment.values_at(:skill_missing, :staffing_shortage, :time_conflict).none?
     when "skill_missing"
-      skill_missing
+      judgment[:skill_missing]
     when "staffing_shortage"
-      staffing_shortage
+      judgment[:staffing_shortage]
     when "time_conflict"
-      time_conflict
+      judgment[:time_conflict]
     else
       true
     end

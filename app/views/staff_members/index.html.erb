@@ -62,7 +62,7 @@
             </div>
           </div>
         </article>
-        <%= render "shared/shift_modal", staff_member: staff_member, modal_id: "shiftModal-#{staff_member.id}" %>
+        <%= render "shared/shift_modal", staff_member: staff_member, modal_id: "shiftModal-#{staff_member.id}", assignment_judgments: @assignment_judgments %>
       </div>
     <% end %>
   </div>
