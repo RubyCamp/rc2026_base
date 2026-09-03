@@ -7,13 +7,15 @@ class DemoDataManagerTest < ActiveSupport::TestCase
 
   test "同じseedでシナリオを満たす規模のバッチを生成する" do
     batch = DemoData::Manager.generate!(seed: 20260903)
+    months = DemoData::Generator.months_for(Time.zone.today)
 
     assert_equal 1, DemoDataBatch.active.count
     assert_equal 20260903, batch.seed
     assert_includes (8..12), Business.where(id: batch.tracked_ids("Business")).count
     assert_includes (8..12), Skill.where(id: batch.tracked_ids("Skill")).count
     assert_includes (30..45), StaffMember.where(id: batch.tracked_ids("StaffMember")).count
-    assert_includes (35..60), WorkRequest.where(id: batch.tracked_ids("WorkRequest")).count
+    assert_operator WorkRequest.where(id: batch.tracked_ids("WorkRequest")).count,
+      :>=, DemoData::Generator::MONTHLY_MINIMUMS[:work_requests] * months.length
 
     assert_operator WorkRequest.where(starts_at: Time.zone.today.all_day).count, :positive?
     assert_predicate Availability.available, :any?
@@ -34,6 +36,51 @@ class DemoDataManagerTest < ActiveSupport::TestCase
       .exists?(id: skill_missing.assignments.first.staff_member_id)
     assert_operator shortage.staffing_shortage_count, :positive?
     assert_predicate StaffMember.available_for(work_request_id: ok.id), :any?
+
+    fixed_titles = %w[
+      評価OK・確定候補
+      時間重複・既存シフト
+      時間重複・評価注意
+      スキル不足・評価注意
+      人員不足・候補確認
+      確定済み・シフト確認
+    ]
+    owned_requests = WorkRequest.where(id: batch.tracked_ids("WorkRequest"))
+    assert_equal fixed_titles.length,
+      owned_requests.where(title: fixed_titles, starts_at: Time.zone.today.all_month).count
+    assert_predicate StaffMember.available_for(work_request_id: ok.id)
+      .where(id: batch.tracked_ids("StaffMember")), :any?
+    assert_predicate owned_requests.where("notes LIKE ?", "%交通%").where(starts_at: Time.zone.today.all_month), :any?
+
+    assert_monthly_coverage(batch)
+  end
+
+  test "生成日時を基準に19か月の範囲を固定する" do
+    travel_to Time.zone.local(2027, 2, 18, 10) do
+      batch = DemoData::Manager.generate!(seed: 20270218)
+      months = DemoData::Generator.months_for(Time.zone.today)
+      start_month = months.first
+      end_month = months.last
+
+      assert_equal Date.new(2026, 8, 1), start_month
+      assert_equal Date.new(2028, 2, 1), end_month
+      assert_equal 19, months.length
+
+      assert_owned_dates_within(batch, "WorkRequest", :starts_at, start_month, end_month)
+      assert_owned_dates_within(batch, "Availability", :starts_at, start_month, end_month)
+      assert_owned_dates_within(batch, "ChangeEvent", :occurred_at, start_month, end_month)
+      assert_monthly_coverage(batch)
+    end
+  end
+
+  test "複数seedでも全月の最低条件を決定的に満たす" do
+    [ 101, 202 ].each do |seed|
+      batch = DemoData::Manager.generate!(seed: seed)
+
+      assert_monthly_coverage(batch)
+      assert_equal 0, duplicate_owned_records(batch)
+      DemoData::Manager.cleanup!
+    end
   end
 
   test "生成データだけを所有権情報で削除し手動データを残す" do
@@ -120,5 +167,50 @@ class DemoDataManagerTest < ActiveSupport::TestCase
     assert_predicate business.reload, :persisted?
     assert_predicate skill.reload, :persisted?
     assert_predicate DemoDataBatch.find(batch.id), :persisted?
+  end
+
+  private
+
+  def assert_monthly_coverage(batch)
+    months = DemoData::Generator.months_for(Time.zone.today)
+    minimums = DemoData::Generator::MONTHLY_MINIMUMS
+
+    months.each do |month|
+      work_request_ids = batch.tracked_ids("WorkRequest")
+      assignment_ids = batch.tracked_ids("Assignment")
+      availability_ids = batch.tracked_ids("Availability")
+      change_event_ids = batch.tracked_ids("ChangeEvent")
+
+      work_requests = WorkRequest.where(id: work_request_ids, starts_at: month.all_month)
+      availabilities = Availability.where(id: availability_ids, starts_at: month.all_month)
+      assignments = Assignment
+        .joins(:work_request)
+        .where(id: assignment_ids, work_requests: { starts_at: month.all_month })
+      change_events = ChangeEvent.where(id: change_event_ids, occurred_at: month.all_month)
+
+      assert_operator work_requests.count, :>=, minimums[:work_requests], month.to_s
+      assert_operator availabilities.count, :>=, minimums[:availabilities], month.to_s
+      assert_operator assignments.draft.count, :>=, minimums[:draft_assignments], month.to_s
+      assert_operator assignments.confirmed.count, :>=, minimums[:confirmed_assignments], month.to_s
+      assert_operator change_events.count, :>=, minimums[:change_events], month.to_s
+    end
+  end
+
+  def assert_owned_dates_within(batch, record_type, attribute, start_month, end_month)
+    model = DemoData::Manager::TRACKED_TYPES.fetch(record_type)
+    lower_bound = start_month.beginning_of_month.beginning_of_day
+    upper_bound = end_month.end_of_month.end_of_day
+    dates = model.where(id: batch.tracked_ids(record_type)).pluck(attribute)
+
+    assert_operator dates.min, :>=, lower_bound
+    assert_operator dates.max, :<=, upper_bound
+  end
+
+  def duplicate_owned_records(batch)
+    batch.demo_data_records
+      .group(:record_type, :record_id)
+      .having("COUNT(*) > 1")
+      .count
+      .length
   end
 end

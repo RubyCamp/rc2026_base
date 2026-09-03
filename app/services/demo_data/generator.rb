@@ -2,6 +2,18 @@ require "set"
 
 module DemoData
   class Generator
+    MONTHS_BEFORE = 6
+    MONTHS_AFTER = 12
+    MONTH_OFFSETS = (-MONTHS_BEFORE..MONTHS_AFTER).to_a.freeze
+    MONTHLY_MINIMUMS = {
+      work_requests: 4,
+      availabilities: 10,
+      draft_assignments: 2,
+      confirmed_assignments: 1,
+      change_events: 4
+    }.freeze
+    MONTHLY_RANDOM_WORK_REQUESTS = 2
+
     BUSINESS_NAMES = %w[
       青葉ホテル
       みなと旅館
@@ -60,11 +72,18 @@ module DemoData
     TRANSPORTS = %w[電車 バス 自転車 徒歩 自家用車 送迎車].freeze
     PROFICIENCY_LABELS = %w[初級 経験あり 研修済み 熟練].freeze
 
+    def self.months_for(date)
+      current_month = date.beginning_of_month
+      MONTH_OFFSETS.map { |offset| current_month.advance(months: offset) }
+    end
+
     def initialize(seed: nil, label: nil)
       @seed = normalize_seed(seed)
       @random = Random.new(@seed)
       @label = label.presence || "ランダムデモデータ"
       @today = Time.zone.today
+      @current_month = @today.beginning_of_month
+      @months = self.class.months_for(@today)
       @businesses = []
       @skills = []
       @staff_members = []
@@ -72,6 +91,8 @@ module DemoData
       @availabilities = []
       @assignments = []
       @used_names = Set.new
+      @monthly_requests = {}
+      @protected_request_ids = Set.new
     end
 
     def call
@@ -91,6 +112,7 @@ module DemoData
       create_staff_skills
       create_availabilities
       create_special_work_requests
+      create_monthly_work_requests
       create_random_work_requests
       create_assignments
       create_additional_change_events
@@ -104,6 +126,21 @@ module DemoData
       value = seed.presence&.to_i
       value = Random.new_seed if value.nil? || value.zero?
       value.abs % 2_147_000_000
+    end
+
+    def current_month_date(offset)
+      candidate = @today + offset.days
+      return candidate if candidate.beginning_of_month == @current_month
+
+      @current_month.end_of_month - 1.day
+    end
+
+    def monthly_date(month, day)
+      [ month + (day - 1).days, month.end_of_month ].min
+    end
+
+    def month_event_time(month, hour)
+      Time.zone.local(month.year, month.month, [ 15, month.end_of_month.day ].min, hour)
     end
 
     def create_skills
@@ -179,28 +216,68 @@ module DemoData
     end
 
     def create_availabilities
-      special_staff = @staff_members.first(5)
-      date_range = (-2..10).to_a.map { |offset| @today + offset.days }
+      active_staff = @staff_members.select(&:active?)
 
-      @staff_members.each_with_index do |staff_member, staff_index|
-        date_range.each do |date|
-          next if date == @today && special_staff.include?(staff_member)
-          next unless @random.rand < 0.58
+      @months.each do |month|
+        coverage_date = monthly_date(month, 8)
+        coverage_date += 1.day if coverage_date == @today
 
-          availability_shape = @random.rand
-          if availability_shape < 0.16
-            add_availability(staff_member, date, 7, 19, :unavailable, "希望休／#{TRANSPORTS.sample(random: @random)}")
-          elsif availability_shape < 0.29
-            add_availability(staff_member, date, 7, 10, :available, "午前のみ／交通: #{TRANSPORTS.sample(random: @random)}")
-            add_availability(staff_member, date, 14, 19, :available, "午後のみ／交通: #{TRANSPORTS.sample(random: @random)}")
-          else
-            start_hour = @random.rand(6..9)
-            end_hour = @random.rand(17..21)
-            add_availability(staff_member, date, start_hour, end_hour, :available, "終日可／交通: #{TRANSPORTS.sample(random: @random)}")
-          end
+        # Ten full-day records make each calendar and candidate list useful,
+        # while the first three staff also anchor the monthly assignments.
+        active_staff.first(MONTHLY_MINIMUMS[:availabilities]).each_with_index do |staff_member, index|
+          start_hour = 7 + (index % 3)
+          end_hour = 19 + (index % 2)
+          add_availability(
+            staff_member,
+            coverage_date,
+            start_hour,
+            end_hour,
+            :available,
+            "月次確認用 #{month.strftime('%Y-%m')}／交通: #{TRANSPORTS.sample(random: @random)}"
+          )
         end
+
+        gap_date = monthly_date(month, 11)
+        gap_date += 1.day if gap_date == @today
+        add_availability(
+          active_staff[10],
+          gap_date,
+          7,
+          10,
+          :available,
+          "午前のみ・空き確認用 #{month.strftime('%Y-%m')}／交通: #{TRANSPORTS.sample(random: @random)}"
+        )
+        add_availability(
+          active_staff[10],
+          gap_date,
+          14,
+          19,
+          :available,
+          "午後のみ・空き確認用 #{month.strftime('%Y-%m')}／交通: #{TRANSPORTS.sample(random: @random)}"
+        )
+
+        unavailable_date = monthly_date(month, 14)
+        unavailable_date += 1.day if unavailable_date == @today
+        add_availability(
+          active_staff[11],
+          unavailable_date,
+          8,
+          18,
+          :unavailable,
+          "希望休確認用 #{month.strftime('%Y-%m')}／交通: #{TRANSPORTS.sample(random: @random)}"
+        )
+
+        record_change(
+          target_type: :availability,
+          target_id: Availability.where(staff_member_id: active_staff.first.id, starts_at: coverage_date.all_day).pick(:id),
+          action_type: :updated,
+          summary: "#{month.strftime('%Y年%m月')}の勤務可否を確認しました",
+          occurred_at: month_event_time(month, 18),
+          reviewed: month.month.odd?
+        )
       end
 
+      special_staff = @staff_members.first(5)
       add_availability(special_staff[0], @today, 8, 20, :available, "評価用: 必要時間をカバー／電車")
       add_availability(special_staff[1], @today, 8, 20, :available, "重複評価用／バス")
       add_availability(special_staff[2], @today, 8, 20, :available, "スキル不足評価用／徒歩")
@@ -295,7 +372,7 @@ module DemoData
         business: @businesses[5],
         required_skill: skill[2] || skill[0],
         title: "確定済み・シフト確認",
-        date: @today + 2.days,
+        date: current_month_date(2),
         start_hour: 11,
         duration: 3,
         required_staff_count: 1,
@@ -340,27 +417,94 @@ module DemoData
       )
     end
 
-    def create_random_work_requests
-      count = @random.rand(35..60) - @scenario_requests.length
-      base_offsets = (-14..30).to_a
+    def create_monthly_work_requests
+      @months.each do |month|
+        date = monthly_date(month, 8)
+        date += 1.day if date == @today
+        month_label = month.strftime("%Y年%m月")
+        monthly = {}
 
-      count.times do |index|
-        date = @today + base_offsets.sample(random: @random).days
-        start_hour = @random.rand(6..18)
-        duration = @random.rand(1..4)
-        status = random_request_status(date)
-
-        add_work_request(
+        monthly[:draft] = add_work_request(
+          business: @businesses.sample(random: @random),
+          required_skill: @skills[0],
+          title: "#{month_label} 月次仮割当確認",
+          date: date,
+          start_hour: 9,
+          duration: 2,
+          required_staff_count: 1,
+          status: :open,
+          notes: "月次下書き確認用／集合: #{LOCATIONS.sample(random: @random)}／交通: #{TRANSPORTS.sample(random: @random)}"
+        )
+        monthly[:confirmed] = add_work_request(
+          business: @businesses.sample(random: @random),
+          required_skill: @skills[0],
+          title: "#{month_label} 月次確定シフト確認",
+          date: date,
+          start_hour: 13,
+          duration: 2,
+          required_staff_count: 1,
+          status: :open,
+          notes: "月次確定確認用／集合: #{LOCATIONS.sample(random: @random)}／交通: #{TRANSPORTS.sample(random: @random)}"
+        )
+        monthly[:shortage] = add_work_request(
+          business: @businesses.sample(random: @random),
+          required_skill: @skills[0],
+          title: "#{month_label} 月次人員不足確認",
+          date: date,
+          start_hour: 16,
+          duration: 2,
+          required_staff_count: 3,
+          status: :open,
+          notes: "月次不足確認用／必要人数3名／交通: #{TRANSPORTS.sample(random: @random)}"
+        )
+        monthly[:open] = add_work_request(
           business: @businesses.sample(random: @random),
           required_skill: @skills.sample(random: @random),
-          title: "#{JOBS.sample(random: @random)} #{index + 1}",
-          date: date,
-          start_hour: start_hour,
-          duration: duration,
-          required_staff_count: @random.rand(1..4),
-          status: status,
-          notes: "集合: #{LOCATIONS.sample(random: @random)}／交通: #{TRANSPORTS.sample(random: @random)}"
+          title: "#{month_label} #{JOBS.sample(random: @random)}",
+          date: monthly_date(month, 12),
+          start_hour: @random.rand(6..17),
+          duration: @random.rand(1..4),
+          required_staff_count: @random.rand(1..3),
+          status: :open,
+          notes: "月次一覧確認用／集合: #{LOCATIONS.sample(random: @random)}／交通: #{TRANSPORTS.sample(random: @random)}"
         )
+
+        @monthly_requests[month] = monthly
+        monthly.each_value { |work_request| @protected_request_ids << work_request.id }
+
+        monthly.each_with_index do |(kind, work_request), index|
+          record_change(
+            target_type: :work_request,
+            target_id: work_request.id,
+            action_type: :updated,
+            summary: "#{month_label}の#{kind}確認用変更を登録しました",
+            occurred_at: month_event_time(month, 19 + index),
+            reviewed: index.even?
+          )
+        end
+      end
+    end
+
+    def create_random_work_requests
+      @months.each do |month|
+        MONTHLY_RANDOM_WORK_REQUESTS.times do |index|
+          date = monthly_date(month, 17 + index * 3)
+          start_hour = @random.rand(6..17)
+          duration = @random.rand(1..4)
+          status = random_request_status(date)
+
+          add_work_request(
+            business: @businesses.sample(random: @random),
+            required_skill: @skills.sample(random: @random),
+            title: "#{month.strftime('%Y年%m月')} #{JOBS.sample(random: @random)} #{index + 1}",
+            date: date,
+            start_hour: start_hour,
+            duration: duration,
+            required_staff_count: @random.rand(1..4),
+            status: status,
+            notes: "集合: #{LOCATIONS.sample(random: @random)}／交通: #{TRANSPORTS.sample(random: @random)}"
+          )
+        end
       end
     end
 
@@ -400,10 +544,13 @@ module DemoData
     end
 
     def create_assignments
+      create_monthly_assignments
+
       candidates = @staff_members.select(&:active?)
 
       @work_requests.each do |work_request|
         next if @scenario_requests.value?(work_request)
+        next if @protected_request_ids.include?(work_request.id)
         next if work_request.cancelled? && @random.rand < 0.8
 
         assignment_count = @random.rand < 0.58 ? [ work_request.required_staff_count, 1 ].max : @random.rand(0..2)
@@ -418,7 +565,35 @@ module DemoData
       end
     end
 
-    def create_direct_assignment(work_request, staff_member, status)
+    def create_monthly_assignments
+      monthly_staff = @staff_members.first(3)
+
+      @months.each do |month|
+        monthly = @monthly_requests.fetch(month)
+        event_time = month_event_time(month, 20)
+
+        create_direct_assignment(
+          monthly.fetch(:draft),
+          monthly_staff.fetch(0),
+          :draft,
+          occurred_at: event_time
+        )
+        create_direct_assignment(
+          monthly.fetch(:shortage),
+          monthly_staff.fetch(2),
+          :draft,
+          occurred_at: event_time + 20.minutes
+        )
+        create_direct_assignment(
+          monthly.fetch(:confirmed),
+          monthly_staff.fetch(1),
+          :confirmed,
+          occurred_at: event_time + 40.minutes
+        )
+      end
+    end
+
+    def create_direct_assignment(work_request, staff_member, status, occurred_at: nil)
       return if Assignment.exists?(work_request_id: work_request.id, staff_member_id: staff_member.id)
 
       assignment = create_record(
@@ -435,7 +610,7 @@ module DemoData
         target_id: assignment.id,
         action_type: :assigned,
         summary: "#{staff_member.name}さんを勤務依頼「#{work_request.title}」へ仮割当しました",
-        occurred_at: assignment.created_at - @random.rand(1..3).days,
+        occurred_at: occurred_at || assignment.created_at - @random.rand(1..3).days,
         reviewed: @random.rand < 0.25
       )
 
@@ -445,7 +620,7 @@ module DemoData
           target_id: assignment.id,
           action_type: :confirmed,
           summary: "#{staff_member.name}さんの勤務依頼「#{work_request.title}」への割当を確定しました",
-          occurred_at: assignment.created_at - @random.rand(0..1).days,
+          occurred_at: (occurred_at || assignment.created_at) + 30.minutes,
           reviewed: @random.rand < 0.5
         )
       end
