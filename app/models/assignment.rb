@@ -15,14 +15,7 @@ class Assignment < ApplicationRecord
 
   def self.draft_for_confirmation
     includes(
-      {
-        staff_member: {
-          staff_skills: :skill,
-          skills: {},
-          availabilities: {},
-          assignments: { work_request: {} }
-        }
-      },
+      { staff_member: { staff_skills: :skill } },
       work_request: [ :business, :required_skill ]
     )
       .where(status: :draft)

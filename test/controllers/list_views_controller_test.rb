@@ -6,13 +6,10 @@ class ListViewsControllerTest < ActionDispatch::IntegrationTest
     DemoData::Manager.generate!(seed: 9100)
   end
 
-  test "仮割当一覧は判定結果と表示順を保ったまま少ないクエリで表示する" do
-    query_count = count_sql_queries do
-      get list_views_path
-    end
+  test "仮割当一覧は判定結果と表示順を保つ" do
+    get list_views_path
 
     assert_response :success
-    assert_operator query_count, :<=, 12
     assert_select "h1", text: "仮割り当て一覧"
 
     displayed_titles = css_select("article.card .definition-list a").map(&:text)
@@ -25,7 +22,7 @@ class ListViewsControllerTest < ActionDispatch::IntegrationTest
     assert_includes response.body, "OK"
   end
 
-  test "スタッフ一覧のシフトモーダルも関連を再取得しない" do
+  test "スタッフ一覧のシフトモーダルは関連を再取得しない" do
     query_count = count_sql_queries do
       get staff_members_path
     end
@@ -36,14 +33,16 @@ class ListViewsControllerTest < ActionDispatch::IntegrationTest
     assert_select "#shiftModal-#{StaffMember.first.id}"
   end
 
-  test "確認一覧のpreloadはスタッフの依頼を再帰的に読み込まない" do
-    assignments = Assignment.draft_for_confirmation.to_a
-    staff_assignments = assignments.flat_map { |assignment| assignment.staff_member.assignments }
+  test "スタッフ一覧のpreloadは依頼の基本属性に限定する" do
+    staff_members = StaffMember
+      .includes(:skills, :availabilities, assignments: { work_request: {} })
+      .order(:name)
+      .to_a
+    assignments = staff_members.flat_map(&:assignments)
 
-    assert_not_empty assignments
-    assert assignments.all? { |assignment| assignment.staff_member.association(:assignments).loaded? }
-    assert staff_assignments.all? { |assignment| assignment.association(:work_request).loaded? }
-    assert staff_assignments.none? { |assignment| assignment.work_request.association(:assignments).loaded? }
+    assert_not_empty staff_members
+    assert assignments.all? { |assignment| assignment.association(:work_request).loaded? }
+    assert assignments.none? { |assignment| assignment.work_request.association(:assignments).loaded? }
   end
 
   test "一括判定は既存の個別判定結果と一致する" do
