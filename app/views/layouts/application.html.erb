@@ -57,6 +57,10 @@
           >
             <ul class="navbar-nav ms-auto">
               <li class="nav-item">
+                <%= link_to "全体案内", guide_path, class: "nav-link" %>
+              </li>
+
+              <li class="nav-item">
                 <%= link_to "勤務依頼",
                             work_requests_path,
                             class: "nav-link" %>
@@ -67,6 +71,36 @@
                             staff_members_path,
                             class: "nav-link" %>
               </li>
+
+              <li class="nav-item">
+                <%= link_to "勤務可否", availabilities_path, class: "nav-link" %>
+              </li>
+
+              <li class="nav-item">
+                <%= link_to "人員状況", details_of_shifts_path, class: "nav-link" %>
+              </li>
+
+              <li class="nav-item">
+                <%= link_to "仮割当", list_views_path, class: "nav-link" %>
+              </li>
+
+              <li class="nav-item">
+                <%= link_to "シフト表", work_requests_shift_path, class: "nav-link" %>
+              </li>
+
+              <li class="nav-item">
+                <%= link_to "変更履歴", change_events_path, class: "nav-link" %>
+              </li>
+
+              <% if session[:role].present? %>
+                <li class="nav-item">
+                  <%= button_to "ログアウト", logout_path, method: :delete, class: "nav-link border-0 bg-transparent" %>
+                </li>
+              <% else %>
+                <li class="nav-item">
+                  <%= link_to "ログイン", login_path, class: "nav-link" %>
+                </li>
+              <% end %>
             </ul>
           </div>
         </div>

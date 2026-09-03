@@ -1,0 +1,18 @@
+<% content_for :title, "全体案内" %>
+
+<div class="mb-4">
+  <p class="mb-1 text-primary fw-semibold">勤務調整システム</p>
+  <h1 class="display-6 fw-bold">勤務調整の流れ</h1>
+  <p class="page-lead text-body-secondary">勤務依頼の登録からスタッフの割当・確定・変更確認まで、各機能を順番に案内します。</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-primary mb-3">1</span><h2 class="h5">勤務依頼を登録</h2><p class="text-body-secondary">事業者はログイン後、自社の勤務依頼を登録・確認できます。</p><%= link_to "ログイン／事業者画面へ", login_path, class: "btn btn-outline-primary" %></div></article></div>
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-primary mb-3">2</span><h2 class="h5">勤務可否を管理</h2><p class="text-body-secondary">スタッフごとの勤務可能時間や希望休を登録します。</p><%= link_to "勤務可否を見る", availabilities_path, class: "btn btn-outline-primary" %></div></article></div>
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-primary mb-3">3</span><h2 class="h5">人員状況を確認</h2><p class="text-body-secondary">必要人数、不足人数、勤務可能な候補スタッフを確認します。</p><%= link_to "人員状況を見る", details_of_shifts_path, class: "btn btn-outline-primary" %></div></article></div>
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-primary mb-3">4</span><h2 class="h5">スタッフを仮割当</h2><p class="text-body-secondary">自動仮割当または勤務依頼詳細の候補一覧からスタッフを割り当てます。</p><%= link_to "勤務依頼を見る", work_requests_path, class: "btn btn-outline-primary" %></div></article></div>
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-primary mb-3">5</span><h2 class="h5">仮割当を評価・確定</h2><p class="text-body-secondary">スキル不足や時間重複を確認し、問題のない仮割当を確定します。</p><%= link_to "仮割当を評価", list_views_path, class: "btn btn-outline-primary" %><%= link_to "確定済み一覧", confirmed_list_views_path, class: "btn btn-outline-secondary ms-2" %></div></article></div>
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-primary mb-3">6</span><h2 class="h5">シフトを確認</h2><p class="text-body-secondary">確定・仮割当の状況を時間軸で確認し、CSV出力できます。</p><%= link_to "シフト表を見る", work_requests_shift_path, class: "btn btn-outline-primary" %></div></article></div>
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-primary mb-3">7</span><h2 class="h5">変更を確認</h2><p class="text-body-secondary">勤務依頼、勤務可否、割当の変更履歴を確認済みにできます。</p><%= link_to "変更履歴を見る", change_events_path, class: "btn btn-outline-primary" %></div></article></div>
+  <div class="col-12 col-md-6"><article class="card h-100 shadow-sm"><div class="card-body"><span class="badge text-bg-secondary mb-3">補助</span><h2 class="h5">スタッフ情報</h2><p class="text-body-secondary">スタッフの在籍状況、スキル、勤務予定を確認します。</p><%= link_to "スタッフ一覧を見る", staff_members_path, class: "btn btn-outline-secondary" %></div></article></div>
+</div>

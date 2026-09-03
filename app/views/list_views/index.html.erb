@@ -1,0 +1,106 @@
+<% content_for :title, "仮割り当て一覧" %>
+
+<div class="mb-4">
+  <p class="mb-1 text-primary fw-semibold">勤務調整</p>
+  <h1 class="display-6 fw-bold">仮割り当て一覧</h1>
+  <p class="page-lead text-body-secondary">仮割り当て中のスタッフと勤務依頼を確認できます。</p>
+</div>
+
+<% judgment_filters = [
+  [ "", "すべて" ],
+  [ "attention", "要確認" ],
+  [ "ok", "OK" ],
+  [ "skill_missing", "スキル不足" ],
+  [ "staffing_shortage", "人数不足" ],
+  [ "time_conflict", "時間重複" ]
+] %>
+
+<section class="card shadow-sm mb-4">
+  <div class="card-body">
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      <% judgment_filters.each do |value, label| %>
+        <% filter_params = request.query_parameters.except("judgment") %>
+        <% filter_params["judgment"] = value if value.present? %>
+        <% active = params[:judgment].to_s == value %>
+        <%= link_to label, list_views_path(filter_params), class: active ? "btn btn-primary btn-sm" : "btn btn-outline-primary btn-sm" %>
+      <% end %>
+    </div>
+
+    <%= form_with url: list_views_path, method: :get, class: "row g-3 align-items-end" do |form| %>
+      <% if params[:judgment].present? %>
+        <%= form.hidden_field :judgment, value: params[:judgment] %>
+      <% end %>
+      <div class="col-12 col-md-4">
+        <%= form.label :business_id, "事業者", class: "form-label" %>
+        <%= form.select :business_id,
+          options_from_collection_for_select(@businesses, :id, :name, params[:business_id]),
+          { include_blank: "すべて" }, class: "form-select" %>
+      </div>
+      <div class="col-12 col-md-3">
+        <%= form.label :date_filter, "勤務日", class: "form-label" %>
+        <%= form.select :date_filter,
+          options_for_select([["すべて", ""], ["今日", "today"], ["今週", "week"], ["日付指定", "date"]], params[:date_filter]),
+          {}, class: "form-select" %>
+      </div>
+      <div class="col-12 col-md-3">
+        <%= form.label :work_date, "指定日", class: "form-label" %>
+        <%= form.date_field :work_date, value: params[:work_date], class: "form-control" %>
+      </div>
+      <div class="col-12 col-md-2">
+        <%= form.submit "絞り込む", class: "btn btn-primary w-100" %>
+      </div>
+    <% end %>
+  </div>
+</section>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <p class="mb-0">該当 <strong><%= @assignments.size %></strong>件</p>
+  <%= link_to "条件をクリア", list_views_path, class: "btn btn-outline-secondary btn-sm" %>
+</div>
+
+<% if @assignments.any? %>
+  <div class="row g-4">
+    <% @assignments.each do |assignment| %>
+      <% staff_member = assignment.staff_member %>
+      <% work_request = assignment.work_request %>
+      <% skill_missing = !StaffMember.skilled_for(work_request_id: work_request.id).exists?(id: staff_member.id) %>
+      <% staffing_shortage = !work_request.staffing_sufficient? %>
+      <% time_conflict = Assignment.time_conflict?(id: assignment.id) %>
+      <% has_warning = skill_missing || staffing_shortage || time_conflict %>
+
+      <div class="col-12 col-md-4">
+        <article class="card h-100 shadow-sm" style="border-top: 0.25rem solid <%= has_warning ? 'var(--bs-danger)' : 'var(--bs-primary)' %>;">
+          <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center gap-3 mb-3">
+              <div class="d-flex flex-wrap gap-2">
+                <span class="badge text-bg-secondary"><%= enum_label(staff_member, :employment_status) %></span>
+                <% if skill_missing %><span class="badge text-bg-danger">スキル不足</span><% end %>
+                <% if staffing_shortage %><span class="badge text-bg-danger">人数不足</span><% end %>
+                <% if time_conflict %><span class="badge text-bg-danger">時間重複</span><% end %>
+                <% unless has_warning %><span class="badge text-bg-primary">OK</span><% end %>
+              </div>
+              <small class="text-body-secondary"><%= l work_request.starts_at, format: :short %></small>
+            </div>
+
+            <h2 class="h5 card-title"><%= staff_member.name %></h2>
+            <dl class="definition-list mb-0">
+              <div><dt>勤務依頼</dt><dd><%= link_to work_request.title, work_request %></dd></div>
+              <div><dt>事業者</dt><dd><%= work_request.business.name %></dd></div>
+              <div><dt>スタッフスキル</dt><dd><%= staff_member.skills.map(&:name).join("、").presence || "なし" %></dd></div>
+              <div><dt>必要スキル</dt><dd><%= work_request.required_skill&.name || "指定なし" %></dd></div>
+            </dl>
+
+            <% unless has_warning %>
+              <div class="mt-3 pt-3 border-top">
+                <%= button_to "確定する", confirm_list_view_path(assignment), method: :patch, class: "btn btn-primary btn-sm w-100" %>
+              </div>
+            <% end %>
+          </div>
+        </article>
+        <%= render "shared/shift_modal", staff_member: staff_member, modal_id: "shiftModal-#{assignment.id}" %>
+      </div>
+    <% end %>
+  </div>
+<% else %>
+  <div class="alert alert-info">仮割り当てはありません。</div>
+<% end %>

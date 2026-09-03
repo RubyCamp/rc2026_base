@@ -1,31 +1,12 @@
 class ChangeEvent < ApplicationRecord
-    DEBUG_EXAMPLES = [
-    [
-      :work_request,
-      :created,
-      "表示確認用：勤務依頼を登録しました"
-    ],
-    [
-      :work_request,
-      :updated,
-      "表示確認用：勤務依頼を更新しました"
-    ],
-    [
-      :availability,
-      :updated,
-      "表示確認用：勤務可否を更新しました"
-    ],
-    [
-      :assignment,
-      :assigned,
-      "表示確認用：スタッフを仮割当しました"
-    ],
-    [
-      :assignment,
-      :unassigned,
-      "表示確認用：スタッフの割当を解除しました"
-    ]
+  DEBUG_EXAMPLES = [
+    [ :work_request, :created, "表示確認用：勤務依頼を登録しました" ],
+    [ :work_request, :updated, "表示確認用：勤務依頼を更新しました" ],
+    [ :availability, :updated, "表示確認用：勤務可否を更新しました" ],
+    [ :assignment, :assigned, "表示確認用：スタッフを仮割当しました" ],
+    [ :assignment, :unassigned, "表示確認用：スタッフの割当を解除しました" ]
   ].freeze
+
   enum :target_type,
        {
          work_request: "work_request",
@@ -89,7 +70,8 @@ class ChangeEvent < ApplicationRecord
     review_status: :pending,
     reviewed_at: nil
   )
-      ensure_debug_enabled! if source.to_s == "debug"
+    ensure_debug_enabled! if source.to_s == "debug"
+
     create!(
       target_type: target_type,
       target_id: target_id,
@@ -101,11 +83,9 @@ class ChangeEvent < ApplicationRecord
       reviewed_at: reviewed_at
     )
   end
+
   def self.create_debug!(review_status: :pending)
-    reviewed_at =
-      if review_status.to_s == "reviewed"
-        Time.current
-      end
+    reviewed_at = Time.current if review_status.to_s == "reviewed"
 
     record!(
       target_type: :work_request,
@@ -122,7 +102,6 @@ class ChangeEvent < ApplicationRecord
     transaction do
       DEBUG_EXAMPLES.each_with_index.map do |example, index|
         target_type, action_type, summary = example
-
         record!(
           target_type: target_type,
           target_id: nil,
@@ -134,14 +113,24 @@ class ChangeEvent < ApplicationRecord
       end
     end
   end
+
+  # 業務処理からも使われるため、既読後の再実行を冪等に保つ。
   def self.mark_reviewed!(id:)
     find(id).tap do |change_event|
       next if change_event.review_status_reviewed?
 
-      change_event.update!(
-        review_status: :reviewed,
-        reviewed_at: Time.current
-      )
+      change_event.update!(review_status: :reviewed, reviewed_at: Time.current)
+    end
+  end
+
+  # 変更履歴画面の「既読/未読」操作用。
+  def self.toggle_reviewed!(id:)
+    find(id).tap do |change_event|
+      if change_event.review_status_pending?
+        change_event.update!(review_status: :reviewed, reviewed_at: Time.current)
+      else
+        change_event.update!(review_status: :pending, reviewed_at: nil)
+      end
     end
   end
 
@@ -150,32 +139,22 @@ class ChangeEvent < ApplicationRecord
       unless debug_enabled? && change_event.source_debug?
         message = "開発用の変更記録だけ削除できます"
         change_event.errors.add(:base, message)
-
-        raise ActiveRecord::RecordNotDestroyed.new(
-          message,
-          change_event
-        )
+        raise ActiveRecord::RecordNotDestroyed.new(message, change_event)
       end
 
       change_event.destroy!
     end
   end
 
-    def self.debug_enabled?
-    Rails.env.development? &&
-      ENV["ENABLE_CHANGE_EVENT_DEBUG"] == "true"
+  def self.debug_enabled?
+    Rails.env.development? && ENV["ENABLE_CHANGE_EVENT_DEBUG"] == "true"
   end
 
   def self.ensure_debug_enabled!
     return if debug_enabled?
 
     change_event = new
-
-    change_event.errors.add(
-      :base,
-      "変更記録のデバッグ機能は無効です"
-    )
-
+    change_event.errors.add(:base, "変更記録のデバッグ機能は無効です")
     raise ActiveRecord::RecordInvalid, change_event
   end
 

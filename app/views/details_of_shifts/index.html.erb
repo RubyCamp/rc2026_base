@@ -1,0 +1,36 @@
+<% content_for :title, "勤務依頼一覧" %>
+
+<div class="mb-4">
+  <p class="mb-1 text-primary fw-semibold">勤務調整</p>
+  <h1 class="display-6 fw-bold">勤務依頼一覧</h1>
+  <p class="page-lead text-body-secondary">依頼内容と現在の人員状況を確認できます。</p>
+  <div class="card my-4"><div class="card-body">
+    <h2 class="h5 mb-3">勤務依頼を検索</h2>
+    <%= form_with url: details_of_shifts_path, method: :get, local: true do |form| %>
+      <div class="row g-3 align-items-end">
+        <div class="col-md-8"><%= form.label :keyword, "キーワード", class: "form-label" %><%= form.text_field :keyword, value: params[:keyword], class: "form-control", placeholder: "依頼名・事業者名・必要スキル" %></div>
+        <div class="col-md-4"><%= form.label :shortage, "不足人数", class: "form-label" %><%= form.select :shortage, options_for_select([["すべて", ""], ["不足あり", "yes"], ["不足なし", "no"]], params[:shortage]), {}, class: "form-select" %></div>
+        <div class="col-12 text-center"><%= form.submit "検索", class: "btn btn-primary" %></div>
+      </div>
+    <% end %>
+  </div></div>
+</div>
+
+<div class="row mb-3"><div class="col-sm-4">勤務依頼件数 <strong><%= @work_requests.count %></strong></div><div class="col-sm-4">不足依頼数 <strong class="text-danger"><%= @work_requests.count { |work_request| !work_request.staffing_sufficient? } %></strong></div><div class="col-sm-4">不足人数 <strong class="text-danger"><%= @work_requests.sum(&:staffing_shortage_count) %></strong></div></div>
+
+<% if @work_requests.any? %>
+  <div class="row"><table class="table table-bordered table-hover">
+    <thead><tr><th>ステータス</th><th>依頼名</th><th>事業者</th><th>必要人数</th><th>割当済み</th><th>不足人数</th><th>必要スキル</th><th>開始日時</th></tr></thead>
+    <tbody>
+      <% @work_requests.each do |work_request| %>
+        <tr class="clickable-row" data-controller="clickable-row" data-clickable-row-url-value="<%= details_of_shift_path(work_request) %>" data-action="click->clickable-row#navigate keydown->clickable-row#navigate" tabindex="0">
+          <td><span class="badge text-bg-info"><%= enum_label(work_request, :status) %></span><% unless work_request.staffing_sufficient? %> <span class="badge text-bg-danger">不足あり</span><% end %></td>
+          <td><%= link_to work_request.title, details_of_shift_path(work_request) %></td>
+          <td><%= work_request.business.name %></td><td><%= work_request.required_staff_count %></td><td><%= work_request.assignments.size %></td>
+          <td class="<%= work_request.staffing_sufficient? ? "table-success" : "table-danger" %>"><%= work_request.staffing_shortage_count %></td>
+          <td><%= work_request.required_skill&.name || "指定なし" %></td><td><%= l work_request.starts_at, format: :short %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table></div>
+<% else %><div class="alert alert-info">勤務依頼はまだ登録されていません。</div><% end %>

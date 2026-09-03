@@ -1,0 +1,3 @@
+<%= turbo_stream.replace "change_event_#{params[:id]}" do %>
+  <%= render "change_event", change_event: ChangeEvent.find(params[:id]) %>
+<% end %>

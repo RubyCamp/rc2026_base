@@ -6,4 +6,15 @@ class ApplicationController < ActionController::Base
   stale_when_importmap_changes
 
   helper ApplicationHelper
+  helper WorkRequestsHelper
+
+  private
+
+  def parse_month(value)
+    return if value.blank?
+
+    Date.strptime(value, "%Y-%m").beginning_of_month
+  rescue ArgumentError
+    nil
+  end
 end

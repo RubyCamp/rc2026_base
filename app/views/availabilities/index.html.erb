@@ -1,0 +1,28 @@
+<% content_for :title, "シフト管理表" %>
+
+<div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3 mb-4">
+  <div><p class="mb-1 text-primary fw-semibold">勤務管理</p><h1 class="display-6 fw-bold mb-2">シフト管理表</h1><p class="page-lead text-body-secondary mb-0">スタッフの希望時間帯と勤務予定を確認できます。</p></div>
+  <%= link_to "希望を登録", new_availability_path, class: "btn btn-primary" %>
+</div>
+
+<div class="calendar-toolbar d-flex align-items-center justify-content-between gap-2 mb-3">
+  <%= link_to "前月", availabilities_path(month: (@current_month - 1.month).strftime("%Y-%m"), staff_member_id: @staff_member_id), class: "btn btn-outline-secondary" %>
+  <h2 class="h3 mb-0"><%= @current_month.strftime("%Y年%-m月") %></h2>
+  <%= link_to "次月", availabilities_path(month: (@current_month + 1.month).strftime("%Y-%m"), staff_member_id: @staff_member_id), class: "btn btn-outline-secondary" %>
+</div>
+
+<%= form_with url: availabilities_path, method: :get, class: "availability-filter row align-items-end g-2 mb-3" do |form| %>
+  <%= hidden_field_tag :month, @current_month.strftime("%Y-%m") %>
+  <div class="col-12 col-md-5 col-lg-4"><%= form.label :staff_member_id, "スタッフで絞り込み", class: "form-label" %><%= form.select :staff_member_id, options_from_collection_for_select(@staff_members, :id, :name, @staff_member_id), { include_blank: "全員" }, class: "form-select" %></div>
+  <div class="col-auto"><%= form.submit "表示", class: "btn btn-primary" %></div>
+<% end %>
+
+<div class="calendar-shell shadow-sm"><div class="table-responsive"><table class="calendar-table mb-0"><thead><tr><% %w[日 月 火 水 木 金 土].each_with_index do |weekday, index| %><th scope="col" class="<%= index.zero? ? "text-danger" : index == 6 ? "text-primary" : "" %>"><%= weekday %></th><% end %></tr></thead><tbody>
+  <% @calendar_days.each_slice(7) do |week| %><tr><% week.each do |day| %><% day_entries = @availabilities_by_date[day] || [] %><td class="calendar-day <%= "calendar-day-muted" unless day.month == @current_month.month %> <%= "calendar-day-today" if day == Date.current %>"><details class="calendar-details"><summary class="calendar-date"><span><%= day.day %></span><% if day_entries.any? %><span class="badge rounded-pill text-bg-primary"><%= day_entries.size %></span><% end %></summary><div class="calendar-entries"><% if day_entries.any? %><% day_entries.each do |availability| %><div class="calendar-entry"><div class="fw-semibold text-truncate"><%= availability.staff_member.name %></div><% if availability.available? %><div class="small text-body-secondary"><%= availability.starts_at.strftime("%H:%M") %> 〜 <%= availability.ends_at.strftime("%H:%M") %></div><div class="small text-primary"><%= time_label(availability.starts_at, availability.ends_at) %></div><% else %><div class="availability-requested-holiday">希望休</div><% end %><div class="calendar-entry-actions"><%= link_to "更新", edit_availability_path(availability), class: "link-primary" %><%= button_to "削除", availability_path(availability), method: :delete, class: "btn btn-link link-danger p-0", form: { data: { turbo_confirm: "このシフト希望を削除しますか？" } } %></div></div><% end %><% else %><span class="small text-body-secondary">シフトなし</span><% end %></div></details></td><% end %></tr><% end %>
+</tbody></table></div></div>
+
+<section class="staff-monthly-section mt-5" aria-labelledby="staff-monthly-heading"><div class="mb-3"><p class="mb-1 text-primary fw-semibold">スタッフ別</p><h2 id="staff-monthly-heading" class="h3 mb-1">月間シフト一覧</h2><p class="text-body-secondary mb-0"><%= @current_month.strftime("%-m月") %>の勤務希望をスタッフごとに確認できます。</p></div><div class="staff-monthly-list">
+  <% @staff_members.each do |staff_member| %><% staff_entries = @monthly_availabilities_by_staff[staff_member.id] || [] %><article class="staff-monthly-row"><div class="staff-monthly-name"><h3 class="h6 mb-1"><%= staff_member.name %></h3><span class="small text-body-secondary"><%= staff_entries.size %>件</span></div><div class="staff-monthly-entries"><% if staff_entries.any? %><% staff_entries.each do |availability| %><div class="staff-monthly-entry"><span class="fw-semibold"><%= availability.starts_at.strftime("%-m/%-d") %></span><% if availability.available? %><span><%= availability.starts_at.strftime("%H:%M") %>〜<%= availability.ends_at.strftime("%H:%M") %></span><span class="text-primary"><%= time_label(availability.starts_at, availability.ends_at) %></span><% else %><span class="availability-requested-holiday">希望休</span><% end %><%= link_to "更新", edit_availability_path(availability), class: "link-primary" %></div><% end %><% else %><span class="text-body-secondary">登録なし</span><% end %></div></article><% end %>
+</div></section>
+
+<div class="mt-4"><%= link_to "人員状況を確認する", details_of_shifts_path, class: "btn btn-outline-primary" %></div>

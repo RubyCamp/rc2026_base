@@ -1,0 +1,16 @@
+<% content_for :title, "カレンダー" %>
+
+<div class="mb-4">
+  <p class="mb-1 text-primary fw-semibold">勤務調整</p>
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <h1 class="display-6 fw-bold mb-0"><%= @month.strftime("%Y年%-m月") %> 勤務依頼ガントチャート</h1>
+    <div class="btn-group" role="group" aria-label="月の切り替え">
+      <%= link_to "← #{(@month - 1.month).strftime("%-m月")}", admin_calendar_path(month: (@month - 1.month).strftime("%Y-%m")), class: "btn btn-outline-secondary" %>
+      <%= link_to "今月", admin_calendar_path, class: "btn btn-outline-secondary" %>
+      <%= link_to "#{(@month + 1.month).strftime("%-m月")} →", admin_calendar_path(month: (@month + 1.month).strftime("%Y-%m")), class: "btn btn-outline-secondary" %>
+    </div>
+  </div>
+  <p class="page-lead text-body-secondary mt-2">会社ごとの勤務依頼を日別に確認できます。</p>
+</div>
+
+<%= render "work_requests/gantt_chart", businesses: @businesses, work_requests: @work_requests, month: @month %>

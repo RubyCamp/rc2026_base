@@ -1,0 +1,12 @@
+<% if @availability.errors.any? %>
+  <div class="alert alert-danger" role="alert"><ul class="mb-0"><% @availability.errors.full_messages.each do |message| %><li><%= message %></li><% end %></ul></div>
+<% end %>
+
+<%= form_with model: @availability, class: "vstack gap-3" do |form| %>
+  <div><%= form.label :staff_member_id, "スタッフ名", class: "form-label" %><%= form.collection_select :staff_member_id, @staff_members, :id, :name, {}, class: "form-select" %></div>
+  <div><%= form.label :work_date, "日付", class: "form-label" %><%= form.date_field :work_date, class: "form-control", required: true %></div>
+  <div><%= form.label :status, "参加可否", class: "form-label d-block" %><%= form.radio_button :status, :available, id: "status-available" %> <%= form.label :status_available, "可能", class: "me-3" %><%= form.radio_button :status, :unavailable, id: "status-unavailable" %> <%= form.label :status_unavailable, "休み" %></div>
+  <div class="row g-3"><div class="col-12 col-md-6"><%= form.label :starts_at, "開始時刻", class: "form-label" %><%= form.time_field :starts_at, class: "form-control", required: true %></div><div class="col-12 col-md-6"><%= form.label :ends_at, "終了時刻", class: "form-label" %><%= form.time_field :ends_at, class: "form-control", required: true %></div></div>
+  <div><%= form.label :notes, "備考", class: "form-label" %><%= form.text_area :notes, rows: 4, class: "form-control" %></div>
+  <div><%= form.submit "送信", class: "btn btn-outline-primary btn-lg" %></div>
+<% end %>

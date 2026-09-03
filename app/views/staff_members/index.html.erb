@@ -20,7 +20,7 @@
       <div class="col-12 col-md-6">
         <article class="card h-100 shadow-sm">
           <div class="card-body">
-            <span class="badge text-bg-secondary mb-3">
+            <span class="badge <%= staff_member.inactive? ? "text-bg-danger" : "text-bg-secondary" %> mb-3">
               <%= enum_label(
                     staff_member,
                     :employment_status
@@ -45,20 +45,24 @@
               <div>
                 <dt>勤務予定</dt>
                 <dd>
-                  <%= staff_member.availabilities
-                        .map do |availability|
-                          enum_label(
-                            availability,
-                            :status
-                          )
-                        end
-                        .join("、")
-                        .presence || "未登録" %>
+                  <% if staff_member.availabilities.any? %>
+                    <% staff_member.availabilities.each do |availability| %>
+                      <span class="badge <%= availability.unavailable? ? "text-bg-danger" : "text-bg-primary" %>" title="<%= enum_label(availability, :status) %>">
+                        <%= availability.available? ? "○" : "×" %>
+                      </span>
+                    <% end %>
+                  <% else %>
+                    未登録
+                  <% end %>
                 </dd>
               </div>
             </dl>
+            <div class="mt-3 pt-3 border-top">
+              <button type="button" class="btn btn-outline-primary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#shiftModal-<%= staff_member.id %>">シフトを見る</button>
+            </div>
           </div>
         </article>
+        <%= render "shared/shift_modal", staff_member: staff_member, modal_id: "shiftModal-#{staff_member.id}" %>
       </div>
     <% end %>
   </div>

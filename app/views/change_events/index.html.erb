@@ -1,0 +1,41 @@
+<% content_for :title, "変更履歴" %>
+
+<div class="mb-4">
+  <p class="mb-1 text-primary fw-semibold">変更管理</p>
+  <h1 class="display-6 fw-bold">変更履歴</h1>
+  <p class="page-lead text-body-secondary">
+    勤務依頼・勤務可否・割当の操作履歴を確認できます。
+  </p>
+</div>
+
+<section class="card shadow-sm mb-4">
+  <div class="card-body d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+    <div>
+      <span class="fw-semibold">未確認件数</span>
+      <span class="badge rounded-pill text-bg-primary"><%= ChangeEvent.pending_count %>件</span>
+    </div>
+
+    <%= form_with url: change_events_path, method: :get, class: "d-flex gap-2" do |form| %>
+      <%= form.select :review_status,
+                     options_for_select([["未確認", "pending"], ["確認済", "reviewed"]], params[:review_status]),
+                     { include_blank: "すべて" },
+                     class: "form-select" %>
+      <%= form.submit "絞り込む", class: "btn btn-outline-primary" %>
+    <% end %>
+  </div>
+</section>
+
+<section class="card shadow-sm">
+  <div class="card-body">
+    <h2 class="h4 card-title">変更一覧</h2>
+    <% if @change_events.any? %>
+      <ul class="list-group list-group-flush">
+        <% @change_events.each do |change_event| %>
+          <%= render "change_event", change_event: change_event %>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="mb-0 text-body-secondary">変更記録はありません。</p>
+    <% end %>
+  </div>
+</section>

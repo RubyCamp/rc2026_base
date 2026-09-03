@@ -6,6 +6,7 @@ class WorkRequest < ApplicationRecord
 
   has_many :assignments, dependent: :destroy
   has_many :staff_members, through: :assignments
+  has_many :skills, through: :staff_members
 
   enum :status,
        {
@@ -52,87 +53,106 @@ class WorkRequest < ApplicationRecord
     staffing_shortage_count.zero?
   end
 
+  def confirmable?
+    open? && assignments.confirmed.count >= required_staff_count
+  end
+
   def self.register!(attributes:)
-  transaction do
-    create!(attributes).tap do |work_request|
-      ChangeEvent.record!(
-        target_type: :work_request,
-        target_id: work_request.id,
-        action_type: :created,
-        summary: "勤務依頼「#{work_request.title}」を登録しました"
-      )
-    end
-  end
-end
-
-def self.update_details!(id:, attributes:)
-  transaction do
-    find(id).tap do |work_request|
-      work_request.assign_attributes(attributes)
-      work_request.save!
-
-      next unless business_changes?(work_request)
-
-      ChangeEvent.record!(
-        target_type: :work_request,
-        target_id: work_request.id,
-        action_type: :updated,
-        summary: "勤務依頼「#{work_request.title}」を更新しました"
-      )
-    end
-  end
-end
-
-def self.cancel!(id:)
-  transaction do
-    find(id).tap do |work_request|
-      work_request.cancelled!
-
-      next unless business_changes?(work_request)
-
-      ChangeEvent.record!(
-        target_type: :work_request,
-        target_id: work_request.id,
-        action_type: :cancelled,
-        summary: "勤務依頼「#{work_request.title}」を取り消しました"
-      )
-    end
-  end
-end
-
-def self.remove!(id:)
-  transaction do
-    find(id).tap do |work_request|
-      unless work_request.draft? && work_request.assignments.none?
-        message = "下書きで割当のない勤務依頼だけ削除できます"
-        work_request.errors.add(:base, message)
-
-        raise ActiveRecord::RecordNotDestroyed.new(
-          message,
-          work_request
+    transaction do
+      create!(attributes).tap do |work_request|
+        ChangeEvent.record!(
+          target_type: :work_request,
+          target_id: work_request.id,
+          action_type: :created,
+          summary: "勤務依頼「#{work_request.title}」を登録しました"
         )
       end
-
-      target_id = work_request.id
-      title = work_request.title
-
-      work_request.destroy!
-
-      ChangeEvent.record!(
-        target_type: :work_request,
-        target_id: target_id,
-        action_type: :deleted,
-        summary: "勤務依頼「#{title}」を削除しました"
-      )
     end
   end
-end
 
-def self.business_changes?(record)
-  record.saved_changes.except("updated_at").any?
-end
+  def self.update_details!(id:, attributes:)
+    transaction do
+      find(id).tap do |work_request|
+        work_request.assign_attributes(attributes)
+        work_request.save!
 
-private_class_method :business_changes?
+        next unless business_changes?(work_request)
+
+        ChangeEvent.record!(
+          target_type: :work_request,
+          target_id: work_request.id,
+          action_type: :updated,
+          summary: "勤務依頼「#{work_request.title}」を更新しました"
+        )
+      end
+    end
+  end
+
+  def self.cancel!(id:)
+    transaction do
+      find(id).tap do |work_request|
+        work_request.cancelled!
+
+        next unless business_changes?(work_request)
+
+        ChangeEvent.record!(
+          target_type: :work_request,
+          target_id: work_request.id,
+          action_type: :cancelled,
+          summary: "勤務依頼「#{work_request.title}」を取り消しました"
+        )
+      end
+    end
+  end
+
+  def self.confirm!(id:)
+    transaction do
+      find(id).tap do |work_request|
+        unless work_request.confirmable?
+          work_request.errors.add(:base, "必要人数分のスタッフ確定が必要です")
+          raise ActiveRecord::RecordInvalid, work_request
+        end
+
+        work_request.confirmed!
+        ChangeEvent.record!(
+          target_type: :work_request,
+          target_id: work_request.id,
+          action_type: :confirmed,
+          summary: "勤務依頼「#{work_request.title}」の受付を終了しました"
+        )
+      end
+    end
+  end
+
+  def self.remove!(id:)
+    transaction do
+      find(id).tap do |work_request|
+        unless work_request.draft? && work_request.assignments.none?
+          message = "下書きで割当のない勤務依頼だけ削除できます"
+          work_request.errors.add(:base, message)
+          raise ActiveRecord::RecordNotDestroyed.new(message, work_request)
+        end
+
+        target_id = work_request.id
+        title = work_request.title
+        work_request.destroy!
+
+        ChangeEvent.record!(
+          target_type: :work_request,
+          target_id: target_id,
+          action_type: :deleted,
+          summary: "勤務依頼「#{title}」を削除しました"
+        )
+      end
+    end
+  end
+
+  def self.business_changes?(record)
+    record.saved_changes.except("updated_at").any?
+  end
+
+  private_class_method :business_changes?
+
   private
 
   def ends_at_after_starts_at

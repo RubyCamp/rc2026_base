@@ -1,32 +1,59 @@
 Rails.application.routes.draw do
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
-
-  # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
-  # Can be used by load balancers and uptime monitors to verify that the app is live.
   get "up" => "rails/health#show", as: :rails_health_check
+
+  root "home#index"
+
+  get "guide", to: "guide#index", as: :guide
 
   get "tutorial", to: "tutorials#index", as: :tutorial
   get "tutorial/debug", to: "tutorials#debug", as: :tutorial_debug
+  get "tutorial/profiles/:id", to: "tutorials#show", as: :tutorial_profile
 
-    # Render dynamic PWA files from app/views/pwa/* (remember to link manifest in application.html.erb)
-    # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
-    # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
+  get "login", to: "sessions#new", as: :login
+  post "login", to: "sessions#create"
+  delete "logout", to: "sessions#destroy", as: :logout
 
-    # Defines the root path route ("/")
-    # root "posts#index"
-    root "work_requests#index"
+  namespace :admin do
+    get "calendar", to: "calendar#index"
+    resources :details, only: [ :show ]
+  end
 
-  resources :work_requests, only: %i[index show edit update]
+  namespace :provider do
+    get "detail", to: "detail#show"
+    resources :work_requests, only: %i[show new create edit update]
+  end
+
+  # 自動仮割当と全解除は状態を変更するためGETでは公開しない。
+  post "work_requests/draft", to: "work_requests#draft", as: :draft
+  delete "work_requests/unassign_all", to: "work_requests#unassign_all", as: :unassign_all
+  get "work_requests/shift", to: "work_requests#shift", as: :work_requests_shift
+  get "work_requests/export", to: "work_requests#export", as: :export_work_requests
+
+  resources :work_requests, only: %i[index show edit update] do
+    post :assign, on: :member
+    delete :unassign, on: :member
+    patch :confirm, on: :member
+  end
+
+  delete "work_requests/:work_request_id/assignments/:id",
+    to: "work_requests#destroy_assignment",
+    as: :work_request_assignment
+
+  resources :details_of_shifts, only: %i[index show edit update]
+  resources :availabilities, only: %i[index new create edit update destroy]
+  resources :list_views, only: [ :index ] do
+    get :confirmed, on: :collection
+    patch :confirm, on: :member
+    patch :unconfirm, on: :member
+  end
+  resources :change_events, only: %i[index update]
   resources :staff_members, only: [ :index ]
-  get "examples/local-data",
-    to: "examples#local_data",
-    as: :examples_local_data
 
-    if Rails.env.development? &&
-    ENV["ENABLE_CHANGE_EVENT_DEBUG"] == "true"
-      namespace :debug do
-        resources :change_events,
-                  only: %i[index create destroy]
-      end
+  get "examples/local-data", to: "examples#local_data", as: :examples_local_data
+
+  if Rails.env.development? && ENV["ENABLE_CHANGE_EVENT_DEBUG"] == "true"
+    namespace :debug do
+      resources :change_events, only: %i[index create destroy]
     end
+  end
 end

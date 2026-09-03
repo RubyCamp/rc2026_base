@@ -1,0 +1,18 @@
+<%= turbo_stream.update "work-request-assignments" do %>
+  <%= render "work_requests/assignments", assignments: @work_request.assignments.reload %>
+<% end %>
+
+<%= turbo_stream.update "work-request-assigned-count" do %>
+  <%= @work_request.assignments.reload.size %>
+<% end %>
+
+<% if @staffing_shortage_count.positive? %>
+  <%= turbo_stream.update "draft-assignment-result" do %>
+    <div class="alert alert-danger mt-3 mb-0" role="alert">
+      仮割当が完了しました。必要人数に対して<%= @staffing_shortage_count %>名不足しています。
+    </div>
+  <% end %>
+  <%= turbo_stream.update "draft-assignment-modal-footer" do %>
+    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+  <% end %>
+<% end %>

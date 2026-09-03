@@ -16,6 +16,12 @@
 
 body {
   min-height: 100vh;
+  font-family:
+    "Noto Sans JP",
+    "Yu Gothic",
+    "Hiragino Kaku Gothic ProN",
+    Meiryo,
+    sans-serif;
 }
 
 .page-lead {
@@ -45,4 +51,347 @@ body {
 .definition-list dd {
   margin: 0;
   text-align: right;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.gantt-wrapper {
+  overflow-x: auto;
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+}
+
+.gantt {
+  display: grid;
+  grid-template-columns: 10rem repeat(var(--gantt-days), minmax(2rem, 1fr));
+  min-width: max-content;
+}
+
+.gantt-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.25rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  background-color: var(--bs-tertiary-bg);
+  border-bottom: 2px solid var(--bs-border-color);
+}
+
+.gantt-corner {
+  grid-column: 1;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.gantt-day-header {
+  flex-direction: column;
+  gap: 0;
+  line-height: 1.1;
+  border-left: 1px dashed var(--bs-border-color);
+}
+
+.gantt-day-weekday {
+  font-weight: 400;
+  font-size: 0.65rem;
+  color: var(--bs-secondary-color);
+}
+
+.gantt-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.gantt-business-label {
+  grid-column: 1;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-weight: 600;
+  background-color: var(--bs-body-bg);
+  border-top: var(--bs-border-width) solid var(--bs-border-color);
+  border-right: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.gantt-grid-cell {
+  border-top: var(--bs-border-width) solid var(--bs-border-color);
+  border-right: 1px dashed var(--bs-border-color);
+}
+
+.gantt-row {
+  position: relative;
+}
+
+.gantt-bar-slot {
+  position: absolute;
+}
+
+.gantt-bar {
+  position: absolute;
+  inset: 3px 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 0.6rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+}
+
+.gantt-bar-link {
+  padding: 0.2rem 0.6rem 0;
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.gantt-bar-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.gantt-bar-count {
+  align-self: flex-end;
+  padding: 0 0.5rem 0.2rem;
+  color: rgb(255 255 255 / 85%);
+  font-size: 0.65rem;
+}
+
+.shift-table-wrapper {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.shift-table {
+  min-width: max-content;
+}
+
+.shift-table th,
+.shift-table td {
+  min-width: 7rem;
+  padding: 0.75rem;
+}
+
+.shift-table thead th {
+  position: sticky;
+  z-index: 2;
+  background-color: var(--bs-light);
+}
+
+.shift-table thead tr:first-child th {
+  top: 0;
+}
+
+.shift-table thead tr:nth-child(2) th {
+  top: 2.75rem;
+}
+
+.shift-table__staff-header {
+  position: sticky !important;
+  left: 0;
+  z-index: 3 !important;
+  min-width: 10rem !important;
+  background-color: var(--bs-light) !important;
+}
+
+.shift-table__date-header {
+  color: var(--bs-primary-text-emphasis);
+  background-color: var(--bs-primary-bg-subtle) !important;
+}
+
+.shift-cell {
+  min-width: 9rem !important;
+  height: 4rem;
+  font-size: 0.875rem;
+}
+
+.calendar-shell {
+  overflow: hidden;
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-body-bg);
+}
+
+.availability-filter {
+  max-width: 48rem;
+}
+
+.calendar-table {
+  width: 100%;
+  min-width: 52rem;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+.calendar-table th {
+  padding: 0.75rem;
+  border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+  background: var(--bs-tertiary-bg);
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.calendar-table th:first-child {
+  color: var(--bs-danger) !important;
+}
+
+.calendar-table th:last-child {
+  color: var(--bs-primary) !important;
+}
+
+.calendar-day {
+  height: 8.75rem;
+  padding: 0.5rem;
+  vertical-align: top;
+  border-right: var(--bs-border-width) solid var(--bs-border-color);
+  border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.calendar-table tr > *:last-child {
+  border-right: 0;
+}
+
+.calendar-table tbody tr:last-child .calendar-day {
+  border-bottom: 0;
+}
+
+.calendar-day-muted {
+  background: var(--bs-tertiary-bg);
+  color: var(--bs-secondary-color);
+}
+
+.calendar-day-today {
+  background: rgb(var(--bs-primary-rgb) / 8%);
+  box-shadow: inset 0.2rem 0 0 var(--bs-primary);
+}
+
+.calendar-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.calendar-date::-webkit-details-marker {
+  display: none;
+}
+
+.calendar-date::after {
+  content: "+";
+  color: var(--bs-secondary-color);
+  font-size: 1.1rem;
+  font-weight: 400;
+}
+
+.calendar-details[open] .calendar-date::after {
+  content: "−";
+}
+
+.calendar-entries {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.calendar-entry {
+  padding: 0.4rem 0.5rem;
+  overflow: hidden;
+  border-left: 0.2rem solid var(--bs-primary);
+  border-radius: var(--bs-border-radius-sm);
+  background: var(--bs-primary-bg-subtle);
+  font-size: 0.8125rem;
+}
+
+.calendar-entry-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+}
+
+.calendar-entry-actions form {
+  display: inline;
+}
+
+.availability-requested-holiday {
+  color: var(--bs-danger);
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.staff-monthly-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.staff-monthly-row {
+  display: grid;
+  grid-template-columns: minmax(9rem, 15rem) 1fr;
+  gap: 1rem;
+  padding: 1rem;
+  border: var(--bs-border-width) solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  background: var(--bs-body-bg);
+}
+
+.staff-monthly-name {
+  padding-right: 1rem;
+  border-right: var(--bs-border-width) solid var(--bs-border-color);
+}
+
+.staff-monthly-entries {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.staff-monthly-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-radius: var(--bs-border-radius-sm);
+  background: var(--bs-tertiary-bg);
+  font-size: 0.875rem;
+}
+
+@media (max-width: 767.98px) {
+  .calendar-toolbar h2 {
+    font-size: 1.25rem;
+  }
+
+  .calendar-table th,
+  .calendar-day {
+    padding: 0.4rem;
+  }
+
+  .staff-monthly-row {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .staff-monthly-name {
+    padding-right: 0;
+    padding-bottom: 0.5rem;
+    border-right: 0;
+    border-bottom: var(--bs-border-width) solid var(--bs-border-color);
+  }
 }

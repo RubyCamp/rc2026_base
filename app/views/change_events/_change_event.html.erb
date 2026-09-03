@@ -1,0 +1,22 @@
+<li id="change_event_<%= change_event.id %>"
+    class="list-group-item px-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+  <div class="d-flex align-items-start gap-3">
+    <span class="badge <%= change_event.review_status_pending? ? "text-bg-danger" : "text-bg-success" %>">
+      <%= change_event.review_status_pending? ? "未確認" : "確認済" %>
+    </span>
+    <div>
+      <div class="small text-body-secondary">
+        <%= l change_event.occurred_at, format: :long %>
+      </div>
+      <strong><%= change_event.summary %></strong>
+    </div>
+  </div>
+
+  <%= button_to(
+        change_event.review_status_pending? ? "既読にする" : "未読にする",
+        change_event_path(change_event),
+        method: :patch,
+        class: change_event.review_status_pending? ? "btn btn-success btn-sm" : "btn btn-outline-secondary btn-sm",
+        form: { data: { turbo_confirm: "この変更記録の確認状態を変更しますか？" } }
+      ) %>
+</li>

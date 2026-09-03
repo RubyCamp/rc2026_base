@@ -1,0 +1,20 @@
+<% if businesses.empty? %>
+  <div class="alert alert-info">事業者が登録されていません。</div>
+<% elsif work_requests.empty? %>
+  <div class="alert alert-info"><%= month.strftime("%Y年%-m月") %>の勤務依頼はまだ登録されていません。</div>
+<% else %>
+  <% days_in_month = month.end_of_month.day %>
+  <% gantt_rows = gantt_rows_for(businesses, work_requests, month) %>
+  <% row_heights = gantt_rows.map { |row| "#{gantt_row_height_rem(row[:lanes_count])}rem" }.join(" ") %>
+  <div class="gantt-wrapper shadow-sm"><div class="gantt" style="--gantt-days: <%= days_in_month %>; grid-template-rows: 2.5rem <%= row_heights %>;">
+    <div class="gantt-header gantt-corner"></div>
+    <% (1..days_in_month).each do |day| %>
+      <div class="gantt-header gantt-day-header" style="grid-column: <%= day + 1 %>;" data-controller="gantt-weekday" data-gantt-weekday-date-value="<%= (month + (day - 1).days).iso8601 %>"><span class="gantt-day-number"><%= day %></span><span class="gantt-day-weekday" data-gantt-weekday-target="label"></span></div>
+    <% end %>
+    <% gantt_rows.each_with_index do |row, index| %>
+      <div class="gantt-business-label" style="grid-row: <%= index + 2 %>;"><span class="gantt-swatch" style="background-color: <%= gantt_business_color(index) %>;"></span><%= row[:business].name %></div>
+      <% (1..days_in_month).each do |day| %><div class="gantt-grid-cell" style="grid-column: <%= day + 1 %>; grid-row: <%= index + 2 %>;"></div><% end %>
+      <div class="gantt-row" style="grid-column: 2 / <%= days_in_month + 2 %>; grid-row: <%= index + 2 %>;"><% row[:bars].each do |bar| %><div class="gantt-bar-slot" style="left: <%= bar[:left_pct] %>%; width: <%= bar[:width_pct] %>%; top: <%= bar[:top_pct] %>%; height: <%= bar[:height_pct] %>%;"><div class="gantt-bar" style="background-color: <%= gantt_business_color(index) %>;" title="<%= bar[:work_request].title %>"><%= link_to bar[:work_request].title, bar[:work_request], class: "gantt-bar-link" %><span class="gantt-bar-count"><%= bar[:work_request].required_staff_count %>名</span></div></div><% end %></div>
+    <% end %>
+  </div></div>
+<% end %>

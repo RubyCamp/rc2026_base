@@ -10,9 +10,14 @@
   </h1>
 
   <p class="page-lead text-body-secondary">
-    参加者のプロフィールを一覧で表示しています。
+    好きなことやひとことから、メンバーについて知ってみましょう。
   </p>
 </div>
+
+<%= form_with url: tutorial_path, method: :get, class: "d-flex gap-2 mb-4" do |form| %>
+  <%= form.search_field :q, value: params[:q], class: "form-control", placeholder: "名前・好きなもの・ひとこと" %>
+  <%= form.submit "検索", class: "btn btn-outline-primary" %>
+<% end %>
 
 <div class="d-flex align-items-center gap-2 mb-4">
   <span class="fw-semibold">表示件数</span>
@@ -48,7 +53,7 @@
           </div>
 
           <h2 class="h5 card-title mb-3">
-            <%= profile.name %>
+            <%= link_to profile.name, tutorial_profile_path(profile.id), class: "link-dark" %>
           </h2>
 
           <dl class="definition-list mb-0">

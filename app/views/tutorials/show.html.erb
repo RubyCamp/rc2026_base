@@ -1,0 +1,6 @@
+<% content_for :title, "プロフィール確認" %>
+<h1 class="display-6 fw-bold mb-4">プロフィール確認</h1>
+<p class="lead"><%= @profile.name %> の好きなもの：<%= @profile.favorite %></p>
+<p>カテゴリ：<%= @profile.category %></p>
+<p><%= @profile.message %></p>
+<%= link_to "一覧へ戻る", tutorial_path, class: "btn btn-outline-secondary" %>
